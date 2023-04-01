@@ -1,20 +1,17 @@
 package com.example.projectgothere
 
-import android.R
-import android.content.res.Configuration
 import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var map: MapView
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
