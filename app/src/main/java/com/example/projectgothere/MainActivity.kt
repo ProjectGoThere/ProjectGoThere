@@ -12,16 +12,15 @@ import org.osmdroid.views.overlay.Marker
 
 
 class MainActivity : AppCompatActivity() {
-
+    private lateinit var map : MapView
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         super.onCreate(savedInstanceState)
         Configuration.getInstance().setUserAgentValue("MyOwnUserAgent/1.0");
         setContentView(R.layout.activity_main)
-
   
-        val map = findViewById<View>(R.id.map) as MapView
+        map = findViewById<View>(R.id.map) as MapView
         map.setMultiTouchControls(true)
 
         val startPoint = GeoPoint(48.13, -1.63)
@@ -34,6 +33,14 @@ class MainActivity : AppCompatActivity() {
         startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         map.overlays.add(startMarker)
         map.invalidate()
+    }
 
+    override fun onResume() {
+        super.onResume()
+        map.onResume()
+    }
+    override fun onPause() {
+        super.onPause()
+        map.onPause()
     }
 }
