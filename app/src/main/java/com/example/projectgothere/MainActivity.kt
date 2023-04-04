@@ -4,24 +4,29 @@ import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.view.View
+import android.Manifest
+import android.widget.Toast
+
 import androidx.appcompat.app.AppCompatActivity
+
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import android.Manifest
-import android.widget.Toast
+import org.osmdroid.views.MapController
+
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
 
-
+private const val TAG = "MainActivity";
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var map : MapView
+    private lateinit var mapController: MapController
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         super.onCreate(savedInstanceState)
-        Configuration.getInstance().setUserAgentValue("MyOwnUserAgent/1.0")
+        Configuration.getInstance().userAgentValue = packageName;
         setContentView(R.layout.activity_main)
         if (EasyPermissions.hasPermissions(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)){
             val s = "Location"
@@ -35,12 +40,13 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 Manifest.permission.ACCESS_FINE_LOCATION)
         }
 
+
         map = findViewById<View>(R.id.map) as MapView
         map.setMultiTouchControls(true)
 
-        val startPoint = GeoPoint(48.13, -1.63)
-        val mapController = map.controller
+        mapController = map.controller as MapController
         mapController.setZoom(9)
+        val startPoint = GeoPoint(48.13, -1.63)
         mapController.setCenter(startPoint)
 
         val startMarker = Marker(map)
@@ -51,7 +57,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     }
 
     private fun displayToast(s:String){
-        Toast.makeText(applicationContext, s + " Permission Granted",Toast.LENGTH_SHORT).show()
+        Toast.makeText(applicationContext, "$s Permission Granted",Toast.LENGTH_SHORT).show()
     }
 
     override fun onRequestPermissionsResult(
