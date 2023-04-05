@@ -8,12 +8,16 @@ import android.Manifest
 import android.widget.Toast
 
 import androidx.appcompat.app.AppCompatActivity
+import org.osmdroid.bonuspack.routing.OSRMRoadManager
+import org.osmdroid.bonuspack.routing.Road
+import org.osmdroid.bonuspack.routing.RoadManager
 
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.MapController
+import org.osmdroid.views.overlay.Polyline
 
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
@@ -22,6 +26,10 @@ private const val TAG = "MainActivity";
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var map : MapView
     private lateinit var mapController: MapController
+    private lateinit var roadManager: RoadManager
+    private lateinit var waypoints: ArrayList<GeoPoint>
+    private lateinit var road: Road
+    private lateinit var roadOverlay: Polyline
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -43,16 +51,33 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
         map = findViewById<View>(R.id.map) as MapView
         map.setMultiTouchControls(true)
+        roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
+
+        val startPoint = GeoPoint(48.13, -1.63)
+        val endPoint = GeoPoint(48.4, -1.9)
+
+        waypoints = ArrayList<GeoPoint>()
+        waypoints.add(startPoint)
+        waypoints.add(endPoint)
 
         mapController = map.controller as MapController
         mapController.setZoom(9)
-        val startPoint = GeoPoint(48.13, -1.63)
         mapController.setCenter(startPoint)
 
         val startMarker = Marker(map)
         startMarker.position = startPoint
         startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         map.overlays.add(startMarker)
+
+        val endMarker = Marker(map)
+        endMarker.position = endPoint
+        endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        map.overlays.add(endMarker)
+
+        road = roadManager.getRoad(waypoints)
+        roadOverlay = RoadManager.buildRoadOverlay(road)
+        map.overlays.add(roadOverlay)
+
         map.invalidate()
     }
 
