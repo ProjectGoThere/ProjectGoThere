@@ -5,6 +5,7 @@ import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.view.View
 import android.Manifest
+import android.graphics.drawable.Drawable
 import android.widget.Toast
 
 import androidx.appcompat.app.AppCompatActivity
@@ -38,18 +39,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         super.onCreate(savedInstanceState)
         Configuration.getInstance().userAgentValue = packageName;
         setContentView(R.layout.activity_main)
-        if (EasyPermissions.hasPermissions(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)){
-            val s = "Location"
-            displayToast(s)
-        }
-        else {
-            EasyPermissions.requestPermissions(
-                this@MainActivity,
-                "App needs your location",
-                101,
-                Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-
+        handlePermissions()
 
         map = findViewById<View>(R.id.map) as MapView
         map.setMultiTouchControls(true)
@@ -80,21 +70,40 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         roadOverlay = RoadManager.buildRoadOverlay(road)
         map.overlays.add(roadOverlay)
 
-        val nodeIcon = ContextCompat.getDrawable(this, org.osmdroid.bonuspack.R.drawable.marker_default)
-        for(i in 0 until road.mNodes.size){
-            val node = road.mNodes.get(i)
-            val nodeMarker = Marker(map)
-            nodeMarker.position = node.mLocation
-            nodeMarker.icon = nodeIcon
-            nodeMarker.title = "Step "+i
-            map.overlays.add(nodeMarker)
-        }
+        showRouteSteps()
 
         map.invalidate()
     }
 
     private fun displayToast(s:String){
         Toast.makeText(applicationContext, "$s Permission Granted",Toast.LENGTH_SHORT).show()
+    }
+    private fun handlePermissions(){
+        if (EasyPermissions.hasPermissions(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)){
+            val s = "Location"
+            displayToast(s)
+        }
+        else {
+            EasyPermissions.requestPermissions(
+                this@MainActivity,
+                "App needs your location",
+                101,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+    private fun showRouteSteps(){
+        val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
+
+        for(i in 0 until road.mNodes.size){
+            val node = road.mNodes[i]
+            val nodeMarker = Marker(map)
+            nodeMarker.position = node.mLocation
+            nodeMarker.icon = nodeIcon
+            nodeMarker.title = "Step "+i
+            nodeMarker.snippet = node.mInstructions
+            nodeMarker.subDescription = Road.getLengthDurationText(this,node.mLength,node.mDuration)
+            map.overlays.add(nodeMarker)
+        }
     }
 
     override fun onRequestPermissionsResult(
