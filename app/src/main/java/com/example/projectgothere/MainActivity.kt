@@ -8,9 +8,11 @@ import android.Manifest
 import android.widget.Toast
 
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
+import org.osmdroid.bonuspack.routing.RoadNode
 
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
@@ -77,6 +79,16 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         road = roadManager.getRoad(waypoints)
         roadOverlay = RoadManager.buildRoadOverlay(road)
         map.overlays.add(roadOverlay)
+
+        val nodeIcon = ContextCompat.getDrawable(this, org.osmdroid.bonuspack.R.drawable.marker_default)
+        for(i in 0 until road.mNodes.size){
+            val node = road.mNodes.get(i)
+            val nodeMarker = Marker(map)
+            nodeMarker.position = node.mLocation
+            nodeMarker.icon = nodeIcon
+            nodeMarker.title = "Step "+i
+            map.overlays.add(nodeMarker)
+        }
 
         map.invalidate()
     }
