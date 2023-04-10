@@ -45,8 +45,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.setMultiTouchControls(true)
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
-        val startPoint = GeoPoint(48.13, -1.63)
-        val endPoint = GeoPoint(48.4, -1.9)
+        val startPoint = GeoPoint(44.3242, -93.9760)
+        val endPoint = GeoPoint(46.7867, -92.1005)
 
         waypoints = ArrayList<GeoPoint>()
         waypoints.add(startPoint)
@@ -102,6 +102,27 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             nodeMarker.title = "Step "+i
             nodeMarker.snippet = node.mInstructions
             nodeMarker.subDescription = Road.getLengthDurationText(this,node.mLength,node.mDuration)
+            val icon = when (node.mManeuverType){
+                //roundabout
+                29 -> ContextCompat.getDrawable(this,R.drawable.ic_roundabout)
+                //straight
+                2 -> ContextCompat.getDrawable(this,R.drawable.ic_continue)
+                //slight left
+                3 -> ContextCompat.getDrawable(this,R.drawable.ic_slight_left)
+                //left turn
+                4 -> ContextCompat.getDrawable(this, R.drawable.ic_turn_left)
+                //sharp left
+                5 -> ContextCompat.getDrawable(this,R.drawable.ic_sharp_left)
+                //exit right/slight right
+                1, 6 -> ContextCompat.getDrawable(this,R.drawable.ic_slight_right)
+                //right turn
+                7 -> ContextCompat.getDrawable(this,R.drawable.ic_turn_right)
+                //sharp right
+                8 -> ContextCompat.getDrawable(this, R.drawable.ic_sharp_right)
+                20 -> ContextCompat.getDrawable(this,R.drawable.ic_continue)
+                else -> null
+            }
+            nodeMarker.image = icon
             map.overlays.add(nodeMarker)
         }
     }
