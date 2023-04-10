@@ -5,12 +5,15 @@ import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.view.View
 import android.Manifest
+import android.graphics.drawable.Drawable
 import android.widget.Toast
 
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
+import org.osmdroid.bonuspack.routing.RoadNode
 
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
@@ -36,25 +39,14 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         super.onCreate(savedInstanceState)
         Configuration.getInstance().userAgentValue = packageName;
         setContentView(R.layout.activity_main)
-        if (EasyPermissions.hasPermissions(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)){
-            val s = "Location"
-            displayToast(s)
-        }
-        else {
-            EasyPermissions.requestPermissions(
-                this@MainActivity,
-                "App needs your location",
-                101,
-                Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-
+        handlePermissions()
 
         map = findViewById<View>(R.id.map) as MapView
         map.setMultiTouchControls(true)
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
-        val startPoint = GeoPoint(48.13, -1.63)
-        val endPoint = GeoPoint(48.4, -1.9)
+        val startPoint = GeoPoint(44.3242, -93.9760)
+        val endPoint = GeoPoint(46.7867, -92.1005)
 
         waypoints = ArrayList<GeoPoint>()
         waypoints.add(startPoint)
@@ -78,11 +70,61 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         roadOverlay = RoadManager.buildRoadOverlay(road)
         map.overlays.add(roadOverlay)
 
+        showRouteSteps()
+
         map.invalidate()
     }
 
     private fun displayToast(s:String){
         Toast.makeText(applicationContext, "$s Permission Granted",Toast.LENGTH_SHORT).show()
+    }
+    private fun handlePermissions(){
+        if (EasyPermissions.hasPermissions(this@MainActivity, Manifest.permission.ACCESS_FINE_LOCATION)){
+            val s = "Location"
+            displayToast(s)
+        }
+        else {
+            EasyPermissions.requestPermissions(
+                this@MainActivity,
+                "App needs your location",
+                101,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+    private fun showRouteSteps(){
+        val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
+
+        for(i in 0 until road.mNodes.size){
+            val node = road.mNodes[i]
+            val nodeMarker = Marker(map)
+            nodeMarker.position = node.mLocation
+            nodeMarker.icon = nodeIcon
+            nodeMarker.title = "Step "+i
+            nodeMarker.snippet = node.mInstructions
+            nodeMarker.subDescription = Road.getLengthDurationText(this,node.mLength,node.mDuration)
+            val icon = when (node.mManeuverType){
+                //roundabout
+                29 -> ContextCompat.getDrawable(this,R.drawable.ic_roundabout)
+                //straight
+                2 -> ContextCompat.getDrawable(this,R.drawable.ic_continue)
+                //slight left
+                3 -> ContextCompat.getDrawable(this,R.drawable.ic_slight_left)
+                //left turn
+                4 -> ContextCompat.getDrawable(this, R.drawable.ic_turn_left)
+                //sharp left
+                5 -> ContextCompat.getDrawable(this,R.drawable.ic_sharp_left)
+                //exit right/slight right
+                1, 6 -> ContextCompat.getDrawable(this,R.drawable.ic_slight_right)
+                //right turn
+                7 -> ContextCompat.getDrawable(this,R.drawable.ic_turn_right)
+                //sharp right
+                8 -> ContextCompat.getDrawable(this, R.drawable.ic_sharp_right)
+                20 -> ContextCompat.getDrawable(this,R.drawable.ic_continue)
+                else -> null
+            }
+            nodeMarker.image = icon
+            map.overlays.add(nodeMarker)
+        }
     }
 
     override fun onRequestPermissionsResult(
