@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">ProjectGoThere</string>
     <string name="welcome">Welcome!</string>
-    <string name="welcome_advance">Click on the screen to start your trip</string>
+    <string name="welcome_advance">Click here to start your trip</string>
 </resources>
