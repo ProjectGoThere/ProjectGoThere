@@ -6,17 +6,17 @@ xmlns:tools="http://schemas.android.com/tools"
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
+    android:id="@+id/welcome_click"
     tools:context=".WelcomePageActivity">
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="24dp"
-        tools:text = "@string/welcome"/>
+        android:text = "@string/welcome"/>
 
-    <Button
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="24dp"
-        tools:text="@string/welcome_advance"
-        android:id="@+id/welcome_click"/>
+        android:text="@string/welcome_advance" />
 </LinearLayout>
