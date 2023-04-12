@@ -14,17 +14,35 @@ xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="cursive"
-        android:padding="24dp"
+        android:paddingBottom="15dp"
         android:text="@string/welcome"
         android:textColor="@color/tan"
-        android:textSize="72sp" />
+        android:textSize="54sp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/calligraffitti"
-        android:padding="24dp"
+        android:fontFamily="@font/alata"
+        android:paddingBottom="-20dp"
+        android:text="@string/welcome2"
+        android:textColor="@color/tan"
+        android:textSize="80sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/alata"
+        android:paddingTop="-30dp"
+        android:text="@string/welcome3"
+        android:textColor="@color/tan"
+        android:textSize="80sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="cursive"
+        android:paddingTop="40dp"
         android:text="@string/welcome_advance"
         android:textColor="@color/tan"
-        android:textSize="20sp" />
+        android:textSize="24sp" />
 </LinearLayout>
