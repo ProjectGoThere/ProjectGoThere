@@ -7,16 +7,24 @@ xmlns:tools="http://schemas.android.com/tools"
     android:gravity="center"
     android:orientation="vertical"
     android:id="@+id/welcome_click"
+    android:background="@drawable/gradient_background"
     tools:context=".WelcomePageActivity">
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="24dp"
-        android:text = "@string/welcome"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:fontFamily="cursive"
         android:padding="24dp"
-        android:text="@string/welcome_advance" />
+        android:text="@string/welcome"
+        android:textColor="@color/tan"
+        android:textSize="72sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/calligraffitti"
+        android:padding="24dp"
+        android:text="@string/welcome_advance"
+        android:textColor="@color/tan"
+        android:textSize="20sp" />
 </LinearLayout>
