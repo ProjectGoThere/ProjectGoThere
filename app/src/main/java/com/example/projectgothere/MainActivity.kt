@@ -19,6 +19,8 @@ import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 
 private const val TAG = "MainActivity";
@@ -45,7 +47,6 @@ class MainActivity : AppCompatActivity(){
 
         getLocation(map)
 
-        //val startPoint = GeoPoint(44.3242, -93.9760)
         val startPoint = currentLocation
         val endPoint = GeoPoint(46.7867, -92.1005)
 
@@ -67,6 +68,10 @@ class MainActivity : AppCompatActivity(){
         endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         map.overlays.add(endMarker)
 
+        var locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map);
+        locationOverlay.enableMyLocation();
+        map.overlays.add(locationOverlay)
+
         road = roadManager.getRoad(waypoints)
         roadOverlay = RoadManager.buildRoadOverlay(road)
         map.overlays.add(roadOverlay)
@@ -86,8 +91,8 @@ class MainActivity : AppCompatActivity(){
         }
         if (location != null) {
             val loc = GeoPoint(
-                (location.latitude * 1000000),
-                (location.longitude * 1000000)
+                (location.latitude),
+                (location.longitude)
             )
             currentLocation = loc
         }
