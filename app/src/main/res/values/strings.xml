@@ -1,3 +1,7 @@
 <resources>
-    <string name="app_name">ProjectGoThere</string>
+    <string name="app_name">Project Go There</string>
+    <string name="welcome">Welcome to</string>
+    <string name="welcome2">Project</string>
+    <string name="welcome3">Go There!</string>
+    <string name="welcome_advance">Click the screen to start your trip</string>
 </resources>

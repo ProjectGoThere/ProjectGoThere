@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:id="@+id/welcome_click"
+    android:background="@drawable/gradient_background"
+    tools:context=".WelcomePageActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="cursive"
+        android:paddingBottom="15dp"
+        android:text="@string/welcome"
+        android:textColor="@color/tan"
+        android:textSize="54sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/alata"
+        android:paddingBottom="-20dp"
+        android:text="@string/welcome2"
+        android:textColor="@color/tan"
+        android:textSize="80sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/alata"
+        android:paddingTop="-30dp"
+        android:text="@string/welcome3"
+        android:textColor="@color/tan"
+        android:textSize="80sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="cursive"
+        android:paddingTop="40dp"
+        android:text="@string/welcome_advance"
+        android:textColor="@color/tan"
+        android:textSize="24sp" />
+</LinearLayout>
