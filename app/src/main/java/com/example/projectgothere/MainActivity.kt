@@ -1,30 +1,25 @@
 package com.example.projectgothere
 
+import android.content.Intent
+import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.view.View
-import android.Manifest
-import android.content.Intent
-import android.graphics.drawable.Drawable
 import android.widget.Toast
-
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
-import org.osmdroid.bonuspack.routing.RoadNode
-
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.MapController
 import org.osmdroid.views.overlay.Polyline
 
-import pub.devrel.easypermissions.AppSettingsDialog
-import pub.devrel.easypermissions.EasyPermissions
 
 private const val TAG = "MainActivity";
 class MainActivity : AppCompatActivity(){
@@ -34,6 +29,7 @@ class MainActivity : AppCompatActivity(){
     private lateinit var waypoints: ArrayList<GeoPoint>
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
+    private lateinit var currentLocation: GeoPoint
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -47,7 +43,10 @@ class MainActivity : AppCompatActivity(){
         map.setMultiTouchControls(true)
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
-        val startPoint = GeoPoint(44.3242, -93.9760)
+        getLocation(map)
+
+        //val startPoint = GeoPoint(44.3242, -93.9760)
+        val startPoint = currentLocation
         val endPoint = GeoPoint(46.7867, -92.1005)
 
         waypoints = ArrayList<GeoPoint>()
@@ -75,6 +74,23 @@ class MainActivity : AppCompatActivity(){
         showRouteSteps()
 
         map.invalidate()
+    }
+
+    private fun getLocation(view: View){
+        var location: Location? = null
+        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
+        try {
+            location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)!!
+        } catch (e: SecurityException) {
+            Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT).show()
+        }
+        if (location != null) {
+            val loc = GeoPoint(
+                (location.latitude * 1000000),
+                (location.longitude * 1000000)
+            )
+            currentLocation = loc
+        }
     }
     private fun showRouteSteps(){
         val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
