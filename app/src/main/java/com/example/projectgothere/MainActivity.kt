@@ -105,7 +105,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
     private fun showRouteSteps(){
         val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
-
         for(i in 0 until road.mNodes.size){
             val node = road.mNodes[i]
             val nodeMarker = Marker(map)
