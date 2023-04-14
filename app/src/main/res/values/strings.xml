@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">ProjectGoThere</string>
+    <string name="my_position" />
+    <string name="destination" />
+    <string name="search" />
+    <string name="appwidget_text">EXAMPLE</string>
+    <string name="add_widget">Add widget</string>
+    <string name="app_widget_description">This is an app widget description</string>
 </resources>

@@ -1,29 +1,29 @@
 package com.example.projectgothere
 
+import android.Manifest
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
+import android.preference.PreferenceManager
 import android.view.View
-import android.Manifest
-import android.graphics.drawable.Drawable
+import android.widget.Button
 import android.widget.Toast
-
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.example.projectgothere.databinding.AutoCompleteOnPreferencesBinding
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
-import org.osmdroid.bonuspack.routing.RoadNode
-
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.MapController
 import org.osmdroid.views.overlay.Polyline
-
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
+
 
 private const val TAG = "MainActivity";
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
@@ -33,10 +33,16 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var waypoints: ArrayList<GeoPoint>
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
+    private lateinit var startingPoint: GeoPoint
+    private lateinit var destinationPoint: GeoPoint
+    private lateinit var myLocationManager: LocationManager
+    private lateinit var departureText: AutoCompleteOnPreferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         super.onCreate(savedInstanceState)
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         Configuration.getInstance().userAgentValue = packageName;
         setContentView(R.layout.activity_main)
         handlePermissions()
@@ -73,6 +79,32 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         showRouteSteps()
 
         map.invalidate()
+
+
+        //start
+        val departureText = findViewById<View>(R.id.editDeparture) as AutoCompleteOnPreferences
+        departureText.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
+
+        val searchDepButton: Button = findViewById<View>(R.id.buttonSearchDep) as Button
+        searchDepButton.setOnClickListener(View.OnClickListener {
+            handleSearchButton(
+                START_INDEX,
+                R.id.editDeparture
+            )
+        })
+
+        val destinationText = findViewById<View>(R.id.editDestination) as AutoCompleteOnPreferencesBinding
+
+
+        destinationText.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
+
+        val searchDestButton: Button = findViewById<View>(R.id.buttonSearchDest) as Button
+        searchDestButton.setOnClickListener(View.OnClickListener {
+            handleSearchButton(
+                DEST_INDEX,
+                R.id.editDestination
+            )
+        }) //end
     }
 
     private fun displayToast(s:String){
