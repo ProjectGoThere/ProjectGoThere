@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.view.View
+import android.Manifest
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -21,10 +22,12 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import pub.devrel.easypermissions.AppSettingsDialog
+import pub.devrel.easypermissions.EasyPermissions
 
 
 private const val TAG = "MainActivity";
-class MainActivity : AppCompatActivity(){
+class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var map : MapView
     private lateinit var mapController: MapController
     private lateinit var roadManager: RoadManager
@@ -38,6 +41,7 @@ class MainActivity : AppCompatActivity(){
         super.onCreate(savedInstanceState)
         Configuration.getInstance().userAgentValue = packageName;
         setContentView(R.layout.activity_main)
+        handlePermissions()
         val intent = Intent(this,WelcomePageActivity::class.java)
         startActivity(intent)
 
@@ -132,7 +136,42 @@ class MainActivity : AppCompatActivity(){
             map.overlays.add(nodeMarker)
         }
     }
-
+    private fun displayToast(s:String){
+        Toast.makeText(applicationContext, "$s Permission Granted", Toast.LENGTH_SHORT).show()
+    }
+    private fun handlePermissions(){
+        if (EasyPermissions.hasPermissions(this, Manifest.permission.ACCESS_FINE_LOCATION)){
+            val s = "Location"
+            displayToast(s)
+        }
+        else {
+            EasyPermissions.requestPermissions(
+                this,
+                "App needs your location",
+                101,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        EasyPermissions.onRequestPermissionsResult(requestCode,permissions,grantResults,this)
+    }
+    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
+        when (requestCode){
+            101 -> displayToast("Location")
+        }
+    }
+    override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
+        if (EasyPermissions.somePermissionPermanentlyDenied(this,perms)){
+            AppSettingsDialog.Builder(this).build().show()
+        } else {
+            Toast.makeText(applicationContext,"Permission Denied", Toast.LENGTH_SHORT).show()
+        }
+    }
     override fun onResume() {
         super.onResume()
         map.onResume()
