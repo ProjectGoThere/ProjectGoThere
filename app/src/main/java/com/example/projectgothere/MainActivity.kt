@@ -9,7 +9,9 @@ import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
+import android.preference.PreferenceManager
 import android.view.View
+import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -21,6 +23,7 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+import com.example.projectgothere.databinding.AutoCompleteOnPreferencesBinding
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
@@ -51,6 +54,11 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var markers: ArrayList<Marker>
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
+    private lateinit var startingPoint: GeoPoint
+    private lateinit var destinationPoint: GeoPoint
+    private lateinit var myLocationManager: LocationManager
+    private lateinit var departureText: AutoCompleteOnPreferences
+
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
     private var extraStops: Int = 2
     private lateinit var binding: ActivityMainBinding
@@ -63,7 +71,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         super.onCreate(savedInstanceState)
-
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         Configuration.getInstance().userAgentValue = packageName;
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -84,8 +92,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             //val cameraIntent = Intent(this, CameraActivity::class.java)
             //startActivity(cameraIntent)
         }
-
-        getLocation()
 
         val startPoint = currentLocation
         val endPoint = GeoPoint(46.7867, -92.1005)
@@ -112,6 +118,32 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         showRouteSteps()
 
         map.invalidate()
+
+
+        //start
+        val departureText = findViewById<View>(R.id.editDeparture) as AutoCompleteOnPreferences
+        departureText.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
+
+        val searchDepButton: Button = findViewById<View>(R.id.buttonSearchDep) as Button
+        searchDepButton.setOnClickListener(View.OnClickListener {
+            handleSearchButton(
+                START_INDEX,
+                R.id.editDeparture
+            )
+        })
+
+        val destinationText = findViewById<View>(R.id.editDestination) as AutoCompleteOnPreferencesBinding
+
+
+        destinationText.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
+
+        val searchDestButton: Button = findViewById<View>(R.id.buttonSearchDest) as Button
+        searchDestButton.setOnClickListener(View.OnClickListener {
+            handleSearchButton(
+                DEST_INDEX,
+                R.id.editDestination
+            )
+        }) //end
     }
 
     private fun rand(start: Int, end: Int): Int {
