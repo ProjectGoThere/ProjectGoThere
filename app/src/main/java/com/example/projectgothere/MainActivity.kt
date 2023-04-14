@@ -1,30 +1,30 @@
 package com.example.projectgothere
 
+import android.content.Intent
+import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.view.View
 import android.Manifest
-import android.content.Intent
-import android.graphics.drawable.Drawable
 import android.widget.Toast
-
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
-import org.osmdroid.bonuspack.routing.RoadNode
-
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.MapController
 import org.osmdroid.views.overlay.Polyline
-
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
+
 
 private const val TAG = "MainActivity";
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
@@ -34,6 +34,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var waypoints: ArrayList<GeoPoint>
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
+    private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -48,7 +49,9 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.setMultiTouchControls(true)
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
-        val startPoint = GeoPoint(44.3242, -93.9760)
+        getLocation(map)
+
+        val startPoint = currentLocation
         val endPoint = GeoPoint(46.7867, -92.1005)
 
         waypoints = ArrayList<GeoPoint>()
@@ -69,6 +72,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         map.overlays.add(endMarker)
 
+        var locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map);
+        locationOverlay.enableMyLocation();
+        map.overlays.add(locationOverlay)
+
         road = roadManager.getRoad(waypoints)
         roadOverlay = RoadManager.buildRoadOverlay(road)
         map.overlays.add(roadOverlay)
@@ -77,6 +84,25 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
         map.invalidate()
     }
+
+    private fun getLocation(view: View){
+        var location: Location? = null
+        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
+        try {
+            location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+        } catch (e: SecurityException) {
+            Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT).show()
+        }
+        if (location != null) {
+            val loc = GeoPoint(
+                (location.latitude),
+                (location.longitude)
+            )
+            currentLocation = loc
+        }
+    }
+
+
     private fun showRouteSteps(){
         val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
         for(i in 0 until road.mNodes.size){
@@ -111,7 +137,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             map.overlays.add(nodeMarker)
         }
     }
-
     private fun displayToast(s:String){
         Toast.makeText(applicationContext, "$s Permission Granted", Toast.LENGTH_SHORT).show()
     }
