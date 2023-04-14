@@ -34,7 +34,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var waypoints: ArrayList<GeoPoint>
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
-    private lateinit var currentLocation: GeoPoint
+    private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         var location: Location? = null
         val lm = getSystemService(LOCATION_SERVICE) as LocationManager
         try {
-            location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)!!
+            location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
         } catch (e: SecurityException) {
             Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT).show()
         }
@@ -101,6 +101,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             currentLocation = loc
         }
     }
+
+
     private fun showRouteSteps(){
         val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
 
