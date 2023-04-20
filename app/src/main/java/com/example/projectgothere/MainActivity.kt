@@ -32,9 +32,11 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var mapController: MapController
     private lateinit var roadManager: RoadManager
     private lateinit var waypoints: ArrayList<GeoPoint>
+    private lateinit var markers: ArrayList<Marker>
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
+    private var extraStops: Int = 0
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -57,20 +59,13 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         waypoints = ArrayList<GeoPoint>()
         waypoints.add(startPoint)
         waypoints.add(endPoint)
+        markers = ArrayList<Marker>()
+
+        addWaypoints(waypoints, extraStops)
 
         mapController = map.controller as MapController
         mapController.setZoom(9)
         mapController.setCenter(startPoint)
-
-        val startMarker = Marker(map)
-        startMarker.position = startPoint
-        startMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        map.overlays.add(startMarker)
-
-        val endMarker = Marker(map)
-        endMarker.position = endPoint
-        endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        map.overlays.add(endMarker)
 
         var locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map);
         locationOverlay.enableMyLocation();
@@ -99,6 +94,20 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 (location.longitude)
             )
             currentLocation = loc
+        }
+    }
+
+    private fun addWaypoints(waypoints: ArrayList<GeoPoint>, extraStops: Int){
+        /*val k = 0
+        while (k<extraStops){
+            waypoints.add()//specific GeoPoint chosen randomly from database
+        }*/
+        for ((i, item) in waypoints.withIndex()){
+            markers.add(Marker(map))
+            val currentMarker = markers.elementAt(i)
+            currentMarker.position = item
+            currentMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            map.overlays.add(currentMarker)
         }
     }
 
