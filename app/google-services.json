@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "434773971978",
+    "project_id": "projectgothere-5ba90",
+    "storage_bucket": "projectgothere-5ba90.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:434773971978:android:03ed259e910391d05abbf3",
+        "android_client_info": {
+          "package_name": "com.example.projectgothere"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "434773971978-3a5tjl6juctffqhaosc60bb88nq57fqj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDapACcLohIwjBY0IkfZfZnjaf5gVQfx10"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "434773971978-3a5tjl6juctffqhaosc60bb88nq57fqj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
