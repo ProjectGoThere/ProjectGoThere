@@ -4,4 +4,5 @@
     <string name="welcome2">Project</string>
     <string name="welcome3">Go There!</string>
     <string name="welcome_advance">Click the screen to start your trip</string>
+    <string name="rat">This app needs permissions to function properly</string>
 </resources>
