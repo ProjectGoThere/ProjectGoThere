@@ -1,5 +1,6 @@
 package com.example.projectgothere
 
+import android.Manifest
 import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
@@ -7,7 +8,6 @@ import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.view.View
-import android.Manifest
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -26,7 +26,12 @@ import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
 
 
-private const val TAG = "MainActivity";
+private const val TAG = "MainActivity"
+private const val LOCATION_CODE = 101
+private const val CAM_CODE = 102
+private const val req_code = 100
+private val permList = arrayOf(Manifest.permission.CAMERA,Manifest.permission.READ_EXTERNAL_STORAGE,
+    Manifest.permission.ACCESS_FINE_LOCATION)
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var map : MapView
     private lateinit var mapController: MapController
@@ -39,7 +44,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         super.onCreate(savedInstanceState)
-        Configuration.getInstance().userAgentValue = packageName;
+        Configuration.getInstance().userAgentValue = packageName
         setContentView(R.layout.activity_main)
         handlePermissions()
         val intent = Intent(this,WelcomePageActivity::class.java)
@@ -72,8 +77,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         endMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
         map.overlays.add(endMarker)
 
-        var locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map);
-        locationOverlay.enableMyLocation();
+        var locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map)
+        locationOverlay.enableMyLocation()
         map.overlays.add(locationOverlay)
 
         road = roadManager.getRoad(waypoints)
@@ -141,16 +146,13 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         Toast.makeText(applicationContext, "$s Permission Granted", Toast.LENGTH_SHORT).show()
     }
     private fun handlePermissions(){
-        if (EasyPermissions.hasPermissions(this, Manifest.permission.ACCESS_FINE_LOCATION)){
-            val s = "Location"
-            displayToast(s)
-        }
-        else {
+        if (EasyPermissions.hasPermissions(this, *permList)) {
+            Toast.makeText(this, "Permissions Granted", Toast.LENGTH_SHORT).show()
+        } else {
             EasyPermissions.requestPermissions(
-                this,
-                "App needs your location",
-                101,
-                Manifest.permission.ACCESS_FINE_LOCATION)
+                this, R.string.rat.toString(),
+                req_code, *permList
+            )
         }
     }
     override fun onRequestPermissionsResult(
@@ -164,6 +166,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
         when (requestCode){
             101 -> displayToast("Location")
+            102 -> displayToast("Camera")
         }
     }
     override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
