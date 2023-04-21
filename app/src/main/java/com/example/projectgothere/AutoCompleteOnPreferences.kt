@@ -19,7 +19,7 @@ import java.util.*
  *
  * @author M.Kergall
  */
-class AutoCompleteOnPreference : AppCompatAutoCompleteTextView {
+class AutoCompleteOnPreferences : AppCompatAutoCompleteTextView {
     constructor(context: Context?) : super(context!!)
     constructor(arg0: Context?, arg1: AttributeSet?) : super(arg0!!, arg1)
     constructor(arg0: Context?, arg1: AttributeSet?, arg2: Int) : super(
@@ -69,14 +69,14 @@ class AutoCompleteOnPreference : AppCompatAutoCompleteTextView {
             val prefString = prefs.getString(mKey, "[]")!!
             return try {
                 val prefArray = JSONArray(prefString)
-                val result = arrayOfNulls<String>(prefArray.length())
+                val result = arrayListOf<String>()
                 for (i in 0 until prefArray.length()) {
                     result[i] = prefArray.getString(i)
                 }
                 result
             } catch (e: JSONException) {
                 e.printStackTrace()
-                arrayOfNulls(0)
+                arrayListOf<String>()
             }
         }
 
