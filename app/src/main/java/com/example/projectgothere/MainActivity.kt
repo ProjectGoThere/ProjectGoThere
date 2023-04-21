@@ -46,6 +46,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         super.onCreate(savedInstanceState)
+        
         Configuration.getInstance().userAgentValue = packageName;
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
