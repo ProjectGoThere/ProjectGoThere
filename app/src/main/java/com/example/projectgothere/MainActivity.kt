@@ -58,7 +58,6 @@ private lateinit var mItineraryMarkers : FolderOverlay
 
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
-
     private lateinit var roadManager: RoadManager
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
@@ -136,7 +135,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     }
 
     fun getAddress(p: GeoPoint): String? {
-        val geocoder = GeocoderNominatim(java.net.HttpURLConnection.userAgent)
+        val geocoder = GeocoderNominatim(userAgent)
         val theAddress: String?
         theAddress = try {
             val dLatitude = p.latitude
@@ -161,7 +160,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     }
 
 
-    private class GeocodingTask :
+    class GeocodingTask :
         AsyncTask<Any?, Void?, List<Address>?>() {
         var mIndex = 0
         protected fun doInBackground(vararg params: Any): List<Address>? {
@@ -180,7 +179,56 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 null
             }
         }
-
+        private val mItineraryListener: OnItineraryMarkerDragListener = OnItineraryMarkerDragListener()
+        private fun updateItineraryMarker(
+            marker: Marker?, p: GeoPoint?, index: Int,
+            titleResId: Int, markerResId: Int, imageResId: Int, address: String?): Marker {
+            var marker = marker
+            if (marker == null) {
+                marker = Marker(map)
+                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                marker.setInfoWindow(mViaPointInfoWindow)
+                marker.isDraggable = true
+                marker.setOnMarkerDragListener(mItineraryListener)
+                mItineraryMarkers.add(marker)
+            }
+            val title = R.string.titleResId
+            marker.title = title
+            marker.position = p
+            val icon = ResourcesCompat.getDrawable(resources, markerResId, null)
+            marker.icon = icon
+            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            if (imageResId != -1) marker.image =
+                ResourcesCompat.getDrawable(resources, imageResId, null)
+            marker.relatedObject = index
+            map.invalidate()
+            if (address != null) marker.snippet =
+                address else  //Start geocoding task to get the address and update the Marker description:
+                ReverseGeocodingTask().execute(marker)
+            return marker
+        }
+        fun getRoadAsync() {
+            roads = null
+            var roadStartPoint: GeoPoint? = null
+            if (startingPoint != null) {
+                roadStartPoint = startingPoint
+            } else if (myLocationOverlay.isEnabled() && myLocationOverlay.getLocation() != null) {
+                //use my current location as itinerary start point:
+                roadStartPoint = myLocationOverlay.getLocation()
+            }
+            if (roadStartPoint == null || destinationPoint == null) {
+                updateUIWithRoads(roads)
+                return
+            }
+            val waypoints = ArrayList<GeoPoint>(2)
+            waypoints.add(roadStartPoint)
+            //add intermediate via points:
+            for (p in waypoints) {
+                waypoints.add(p)
+            }
+            waypoints.add(destinationPoint)
+            UpdateRoadTask(this).execute(waypoints)
+        }
         @Deprecated("Deprecated in Java")
         override fun onPostExecute(foundAdresses: List<Address>?) {
             if (foundAdresses == null) {
@@ -222,7 +270,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             TODO("Not yet implemented")
         }
     }
-
     fun handleSearchButton(index: Int, editResId: Int) {
         val locationEdit = findViewById<View>(editResId) as EditText
         //Hide the soft keyboard:
@@ -255,54 +302,13 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
         fun doInBackground(vararg params: ArrayList<GeoPoint?>): Array<Road>?  {
             val waypoints = params[0]
-            val roadManager: RoadManager
+            val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
             val locale = Locale.getDefault()
-            when (mWhichRouteProvider) {
-                OSRM -> roadManager =
-                    OSRMRoadManager(mContext, sun.net.www.protocol.http.HttpURLConnection.userAgent)
-                GRAPHHOPPER_FASTEST -> {
-                    roadManager = GraphHopperRoadManager(graphHopperApiKey, false)
-                    roadManager.addRequestOption("locale=" + locale.language)
-                }
-                GRAPHHOPPER_BICYCLE -> {
-                    roadManager = GraphHopperRoadManager(graphHopperApiKey, false)
-                    roadManager.addRequestOption("locale=" + locale.language)
-                    roadManager.addRequestOption("vehicle=bike")
-                }
-                GRAPHHOPPER_PEDESTRIAN -> {
-                    roadManager = GraphHopperRoadManager(graphHopperApiKey, false)
-                    roadManager.addRequestOption("locale=" + locale.language)
-                    roadManager.addRequestOption("vehicle=foot")
-                }
-                GOOGLE_FASTEST -> roadManager = GoogleRoadManager()
-                else -> return null
-            }
             return roadManager.getRoads(waypoints)
         }
     }
 
-    fun getRoadAsync() {
-        roads = null
-        var roadStartPoint: GeoPoint? = null
-        if (startingPoint != null) {
-            roadStartPoint = startingPoint
-        } else if (myLocationOverlay.isEnabled() && myLocationOverlay.getLocation() != null) {
-            //use my current location as itinerary start point:
-            roadStartPoint = myLocationOverlay.getLocation()
-        }
-        if (roadStartPoint == null || destinationPoint == null) {
-            updateUIWithRoads(roads)
-            return
-        }
-        val waypoints = ArrayList<GeoPoint>(2)
-        waypoints.add(roadStartPoint)
-        //add intermediate via points:
-        for (p in waypoints) {
-            waypoints.add(p)
-        }
-        waypoints.add(destinationPoint)
-        UpdateRoadTask(this).execute(waypoints)
-    }
+
 
     fun setViewOn(bb: BoundingBox?) {
         if (bb != null) {
@@ -332,7 +338,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     }
 
     //Async task to reverse-geocode the marker position in a separate thread:
-    private class ReverseGeocodingTask :
+    public class ReverseGeocodingTask :
         AsyncTask<Marker?, Void?, String>() {
         var marker: Marker? = null
 
@@ -362,34 +368,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         }
 
         override fun onMarkerDragStart(marker: Marker) {}
-    }
-    private val mItineraryListener: OnItineraryMarkerDragListener = OnItineraryMarkerDragListener()
-    fun updateItineraryMarker(
-        marker: Marker?, p: GeoPoint?, index: Int,
-        titleResId: Int, markerResId: Int, imageResId: Int, address: String?): Marker {
-        var marker = marker
-        if (marker == null) {
-            marker = Marker(map)
-            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            marker.setInfoWindow(mViaPointInfoWindow)
-            marker.isDraggable = true
-            marker.setOnMarkerDragListener(mItineraryListener)
-            mItineraryMarkers.add(marker)
-        }
-        val title = resources.getString(titleResId)
-        marker.title = title
-        marker.position = p
-        val icon = ResourcesCompat.getDrawable(resources, markerResId, null)
-        marker.icon = icon
-        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        if (imageResId != -1) marker.image =
-            ResourcesCompat.getDrawable(resources, imageResId, null)
-        marker.relatedObject = index
-        map.invalidate()
-        if (address != null) marker.snippet =
-            address else  //Start geocoding task to get the address and update the Marker description:
-            ReverseGeocodingTask().execute(marker)
-        return marker
     }
 
     fun updateUIWithItineraryMarkers() {
