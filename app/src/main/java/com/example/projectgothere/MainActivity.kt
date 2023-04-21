@@ -25,8 +25,6 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
 
-
-private const val TAG = "MainActivity";
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var map : MapView
     private lateinit var mapController: MapController
@@ -41,7 +39,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         super.onCreate(savedInstanceState)
-        Configuration.getInstance().userAgentValue = packageName;
+        Configuration.getInstance().userAgentValue = packageName
         setContentView(R.layout.activity_main)
         handlePermissions()
         val intent = Intent(this,WelcomePageActivity::class.java)
@@ -51,15 +49,15 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.setMultiTouchControls(true)
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
-        getLocation(map)
+        getLocation()
 
         val startPoint = currentLocation
         val endPoint = GeoPoint(46.7867, -92.1005)
 
-        waypoints = ArrayList<GeoPoint>()
+        waypoints = ArrayList()
         waypoints.add(startPoint)
         waypoints.add(endPoint)
-        markers = ArrayList<Marker>()
+        markers = ArrayList()
 
         addWaypoints(waypoints, extraStops)
 
@@ -67,8 +65,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mapController.setZoom(9)
         mapController.setCenter(startPoint)
 
-        var locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map);
-        locationOverlay.enableMyLocation();
+        val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map)
+        locationOverlay.enableMyLocation()
         map.overlays.add(locationOverlay)
 
         road = roadManager.getRoad(waypoints)
@@ -80,7 +78,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.invalidate()
     }
 
-    private fun getLocation(view: View){
+    private fun getLocation() {
         var location: Location? = null
         val lm = getSystemService(LOCATION_SERVICE) as LocationManager
         try {
@@ -119,7 +117,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             val nodeMarker = Marker(map)
             nodeMarker.position = node.mLocation
             nodeMarker.icon = nodeIcon
-            nodeMarker.title = "Step "+i
+            nodeMarker.title = "Step $i"
             nodeMarker.snippet = node.mInstructions
             nodeMarker.subDescription = Road.getLengthDurationText(this,node.mLength,node.mDuration)
             val icon = when (node.mManeuverType){
