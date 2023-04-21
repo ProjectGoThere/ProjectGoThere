@@ -11,6 +11,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.example.projectgothere.databinding.ActivityMainBinding
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
@@ -40,12 +41,16 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
+    private lateinit var binding: ActivityMainBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         super.onCreate(savedInstanceState)
-        Configuration.getInstance().userAgentValue = packageName
-        setContentView(R.layout.activity_main)
+        Configuration.getInstance().userAgentValue = packageName;
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        //setContentView(R.layout.activity_main)
+
         handlePermissions()
         val intent = Intent(this,WelcomePageActivity::class.java)
         startActivity(intent)
@@ -53,6 +58,13 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map = findViewById<View>(R.id.map) as MapView
         map.setMultiTouchControls(true)
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
+
+        //ContextCompat.getDrawable(this,R.drawable.ic_camera)
+        binding.cameraButton.setOnClickListener{
+            Toast.makeText(applicationContext, "Camera Button is Clickable", Toast.LENGTH_SHORT).show()
+            //val cameraIntent = Intent(this, CameraActivity::class.java)
+            //startActivity(cameraIntent)
+        }
 
         getLocation(map)
 
