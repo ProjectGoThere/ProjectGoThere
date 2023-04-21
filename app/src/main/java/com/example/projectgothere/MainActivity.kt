@@ -1,6 +1,9 @@
 package com.example.projectgothere
 
 import android.Manifest
+import android.content.Context
+import android.gesture.OrientedBoundingBox
+import android.location.Address
 import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
@@ -11,7 +14,9 @@ import android.os.StrictMode.ThreadPolicy
 import android.util.Log
 import android.preference.PreferenceManager
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -27,17 +32,29 @@ import com.example.projectgothere.databinding.AutoCompleteOnPreferencesBinding
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
+import androidx.core.content.res.ResourcesCompat
+import okhttp3.internal.userAgent
+import okio.IOException
+import org.osmdroid.bonuspack.location.GeocoderNominatim
+import org.osmdroid.bonuspack.routing.*
 import org.osmdroid.config.Configuration
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.FolderOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Marker.OnMarkerDragListener
+import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import org.osmdroid.views.overlay.mylocation.DirectedLocationOverlay
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
 import kotlin.random.Random
+import java.net.HttpURLConnection
+import java.util.*
 
 
 private const val TAG = "MainActivity"
@@ -46,16 +63,30 @@ private const val CAM_CODE = 102
 private const val req_code = 100
 private val permList = arrayOf(Manifest.permission.CAMERA,Manifest.permission.READ_EXTERNAL_STORAGE,
     Manifest.permission.ACCESS_FINE_LOCATION)
+private const val SHARED_PREFS_APPKEY = "Project GoThere"
+private const val PREF_LOCATIONS_KEY = "PREF_LOCATIONS"
+private const val START_INDEX = -2
+private const val DEST_INDEX = -1
+private lateinit var startingPoint: GeoPoint
+private lateinit var destinationPoint: GeoPoint
+private lateinit var startMarker : Marker
+private lateinit var endMarker : Marker
+private lateinit var mapController: MapController
+private lateinit var map : MapView
+private lateinit var destinationPolygon: Polygon
+private lateinit var roads : MutableList<Road>
+private lateinit var mViaPointInfoWindow: WaypointInfoWindow
+private lateinit var waypoints: ArrayList<GeoPoint>
+private lateinit var mItineraryMarkers : FolderOverlay
+
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
-    private lateinit var map : MapView
-    private lateinit var mapController: MapController
+
+
     private lateinit var roadManager: RoadManager
     private lateinit var waypoints: ArrayList<GeoPoint>
     private lateinit var markers: ArrayList<Marker>
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
-    private lateinit var startingPoint: GeoPoint
-    private lateinit var destinationPoint: GeoPoint
     private lateinit var myLocationManager: LocationManager
     private lateinit var departureText: AutoCompleteOnPreferences
 
@@ -119,6 +150,9 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
         map.invalidate()
 
+        val mapController = map.controller
+        val myLocationOverlay = DirectedLocationOverlay(this)
+        map.overlays.add(myLocationOverlay)
 
         //start
         val departureText = findViewById<View>(R.id.editDeparture) as AutoCompleteOnPreferences
@@ -132,9 +166,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             )
         })
 
-        val destinationText = findViewById<View>(R.id.editDestination) as AutoCompleteOnPreferencesBinding
-
-
+        val destinationText = findViewById<View>(R.id.editDestination) as AutoCompleteOnPreferences
         destinationText.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
 
         val searchDestButton: Button = findViewById<View>(R.id.buttonSearchDest) as Button
@@ -149,6 +181,311 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private fun rand(start: Int, end: Int): Int {
         require(!(start > end || end - start + 1 > Int.MAX_VALUE)) { "Illegal Argument" }
         return Random(System.nanoTime()).nextInt(end - start + 1) + start
+    }
+    fun getAddress(p: GeoPoint): String? {
+        val geocoder = GeocoderNominatim(java.net.HttpURLConnection.userAgent)
+        val theAddress: String?
+        theAddress = try {
+            val dLatitude = p.latitude
+            val dLongitude = p.longitude
+            val addresses = geocoder.getFromLocation(dLatitude, dLongitude, 1)
+            val sb = StringBuilder()
+            if (addresses.size > 0) {
+                val address = addresses[0]
+                val n = address.maxAddressLineIndex
+                for (i in 0..n) {
+                    if (i != 0) sb.append(", ")
+                    sb.append(address.getAddressLine(i))
+                }
+                sb.toString()
+            } else {
+                null
+            }
+        } catch (e: IOException) {
+            null
+        }
+        return theAddress ?: ""
+    }
+
+
+    private class GeocodingTask :
+        AsyncTask<Any?, Void?, List<Address>?>() {
+        var mIndex = 0
+        protected fun doInBackground(vararg params: Any): List<Address>? {
+            val locationAddress = params[0] as String
+            mIndex = params[1] as Int
+            val geocoder = GeocoderNominatim(userAgent)
+            geocoder.setOptions(true) //ask for enclosing polygon (if any)
+            return try {
+                val viewbox : OrientedBoundingBox
+                geocoder.getFromLocationName(
+                    locationAddress, 1,
+                    viewbox.latSouth, viewbox.lonEast,
+                    viewbox.latNorth, viewbox.lonWest, false
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun onPostExecute(foundAdresses: List<Address>?) {
+            if (foundAdresses == null) {
+                Toast.makeText(this, "Geocoding error", Toast.LENGTH_SHORT).show()
+            } else if (foundAdresses.size == 0) { //if no address found, display an error
+                Toast.makeText(applicationContext, "Address not found",Toast.LENGTH_SHORT).show()
+            } else {
+                val address: Address = foundAdresses[0] //get first address
+                val addressDisplayName: String? = address.getExtras().getString("display_name")
+                if (mIndex == START_INDEX) {
+                    startingPoint = GeoPoint(address.getLatitude(), address.getLongitude())
+                    startMarker = updateItineraryMarker(
+                        startMarker, startingPoint, START_INDEX,
+                        R.string.departure, R.drawable.marker_departure, -1, addressDisplayName
+                    )
+                    mapController.setCenter(startingPoint)
+                } else if (mIndex == DEST_INDEX) {
+                    destinationPoint = GeoPoint(address.getLatitude(), address.getLongitude())
+                    endMarker = updateItineraryMarker(
+                        endMarker, destinationPoint, DEST_INDEX,
+                        R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
+                    )
+                    map.getController().setCenter(destinationPoint)
+                }
+                getRoadAsync()
+                //get and display enclosing polygon:
+                val extras: Bundle = address.getExtras()
+                if (extras.containsKey("polygonpoints")) {
+                    val polygon: ArrayList<GeoPoint?>? =
+                        extras.getParcelableArrayList<GeoPoint>("polygonpoints")
+                    //Log.d("DEBUG", "polygon:"+polygon.size());
+                    updateUIWithPolygon(polygon, addressDisplayName)
+                } else {
+                    updateUIWithPolygon(null, "")
+                }
+            }
+        }
+        override fun doInBackground(vararg p0: Any?): List<Address>? {
+            TODO("Not yet implemented")
+        }
+    }
+
+    fun handleSearchButton(index: Int, editResId: Int) {
+        val locationEdit = findViewById<View>(editResId) as EditText
+        //Hide the soft keyboard:
+        val imm: InputMethodManager =
+            getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(locationEdit.windowToken, 0)
+        val locationAddress = locationEdit.text.toString()
+        if (locationAddress == "") {
+            removePoint(index)
+            map.invalidate()
+            return
+        }
+        Toast.makeText(this, "Searching:\n$locationAddress", Toast.LENGTH_LONG).show()
+        AutoCompleteOnPreferences.storePreference(
+            this,
+            locationAddress,
+            SHARED_PREFS_APPKEY,
+            PREF_LOCATIONS_KEY
+        )
+        GeocodingTask().execute(locationAddress, index)
+    }//endHandleSearchButton
+    private class UpdateRoadTask(private val mContext: Context) :
+        AsyncTask<ArrayList<GeoPoint?>?, Void?, Array<Road>?>() {
+
+        override fun onPostExecute(result: Array<Road>?) {
+            roads = result
+            updateUIWithRoads(result)
+            getPOIAsync(poiTagText.getText().toString())
+        }
+
+        fun doInBackground(vararg params: ArrayList<GeoPoint?>): Array<Road>?  {
+            val waypoints = params[0]
+            val roadManager: RoadManager
+            val locale = Locale.getDefault()
+            when (mWhichRouteProvider) {
+                OSRM -> roadManager =
+                    OSRMRoadManager(mContext, sun.net.www.protocol.http.HttpURLConnection.userAgent)
+                GRAPHHOPPER_FASTEST -> {
+                    roadManager = GraphHopperRoadManager(graphHopperApiKey, false)
+                    roadManager.addRequestOption("locale=" + locale.language)
+                }
+                GRAPHHOPPER_BICYCLE -> {
+                    roadManager = GraphHopperRoadManager(graphHopperApiKey, false)
+                    roadManager.addRequestOption("locale=" + locale.language)
+                    roadManager.addRequestOption("vehicle=bike")
+                }
+                GRAPHHOPPER_PEDESTRIAN -> {
+                    roadManager = GraphHopperRoadManager(graphHopperApiKey, false)
+                    roadManager.addRequestOption("locale=" + locale.language)
+                    roadManager.addRequestOption("vehicle=foot")
+                }
+                GOOGLE_FASTEST -> roadManager = GoogleRoadManager()
+                else -> return null
+            }
+            return roadManager.getRoads(waypoints)
+        }
+    }
+
+    fun getRoadAsync() {
+        roads = null
+        var roadStartPoint: GeoPoint? = null
+        if (startingPoint != null) {
+            roadStartPoint = startingPoint
+        } else if (myLocationOverlay.isEnabled() && myLocationOverlay.getLocation() != null) {
+            //use my current location as itinerary start point:
+            roadStartPoint = myLocationOverlay.getLocation()
+        }
+        if (roadStartPoint == null || destinationPoint == null) {
+            updateUIWithRoads(roads)
+            return
+        }
+        val waypoints = ArrayList<GeoPoint>(2)
+        waypoints.add(roadStartPoint)
+        //add intermediate via points:
+        for (p in waypoints) {
+            waypoints.add(p)
+        }
+        waypoints.add(destinationPoint)
+        UpdateRoadTask(this).execute(waypoints)
+    }
+
+    fun setViewOn(bb: BoundingBox?) {
+        if (bb != null) {
+            map.zoomToBoundingBox(bb, true)
+        }
+    }
+    open fun updateUIWithPolygon(polygon: ArrayList<GeoPoint?>?, name: String?) {
+        val mapOverlays = map.overlays
+        var location = -1
+        if (destinationPolygon != null) location = mapOverlays.indexOf(destinationPolygon)
+        destinationPolygon = Polygon()
+        destinationPolygon.setFillColor(0x15FF0080)
+        destinationPolygon.setStrokeColor(-0x7fffff01)
+        destinationPolygon.setStrokeWidth(5.0f)
+        destinationPolygon.setTitle(name)
+        var bb: BoundingBox? = null
+        if (polygon != null) {
+            destinationPolygon.setPoints(polygon)
+            bb = BoundingBox.fromGeoPoints(polygon)
+        }
+        if (location != -1) mapOverlays[location] = destinationPolygon else mapOverlays.add(
+            1,
+            destinationPolygon
+        ) //insert just above the MapEventsOverlay.
+        setViewOn(bb)
+        map.invalidate()
+    }
+
+    //Async task to reverse-geocode the marker position in a separate thread:
+    private class ReverseGeocodingTask :
+        AsyncTask<Marker?, Void?, String>() {
+        var marker: Marker? = null
+
+
+        override fun onPostExecute(result: String) {
+            marker!!.snippet = result
+            marker!!.showInfoWindow()
+        }
+
+        override fun doInBackground(vararg params: Marker?): String {
+            marker = params[0]
+            return getAddress(marker!!.position)
+        }
+    }
+
+    internal class OnItineraryMarkerDragListener : OnMarkerDragListener {
+        override fun onMarkerDrag(marker: Marker) {}
+        override fun onMarkerDragEnd(marker: Marker) {
+            val index = marker.relatedObject as Int
+            if (index == START_INDEX) startingPoint =
+                marker.position else if (index == DEST_INDEX) destinationPoint =
+                marker.position else waypoints.set(index, marker.position)
+            //update location:
+            ReverseGeocodingTask().execute(marker)
+            //update route:
+            getRoadAsync()
+        }
+
+        override fun onMarkerDragStart(marker: Marker) {}
+    }
+    private val mItineraryListener: OnItineraryMarkerDragListener = OnItineraryMarkerDragListener()
+    fun updateItineraryMarker(
+        marker: Marker?, p: GeoPoint?, index: Int,
+        titleResId: Int, markerResId: Int, imageResId: Int, address: String?): Marker {
+        var marker = marker
+        if (marker == null) {
+            marker = Marker(map)
+            marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            marker.setInfoWindow(mViaPointInfoWindow)
+            marker.isDraggable = true
+            marker.setOnMarkerDragListener(mItineraryListener)
+            mItineraryMarkers.add(marker)
+        }
+        val title = resources.getString(titleResId)
+        marker.title = title
+        marker.position = p
+        val icon = ResourcesCompat.getDrawable(resources, markerResId, null)
+        marker.icon = icon
+        marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        if (imageResId != -1) marker.image =
+            ResourcesCompat.getDrawable(resources, imageResId, null)
+        marker.relatedObject = index
+        map.invalidate()
+        if (address != null) marker.snippet =
+            address else  //Start geocoding task to get the address and update the Marker description:
+            ReverseGeocodingTask().execute(marker)
+        return marker
+    }
+
+    fun updateUIWithItineraryMarkers() {
+        mItineraryMarkers.closeAllInfoWindows()
+        mItineraryMarkers.getItems().clear()
+        //Start marker:
+        if (startPoint != null) {
+            markerStart = updateItineraryMarker(
+                null, startPoint, START_INDEX,
+                R.string.departure, R.drawable.marker_departure, -1, null
+            )
+        }
+        //Via-points markers if any:
+        for (index in 0 until waypoints.size()) {
+            updateItineraryMarker(
+                null, waypoints.get(index), index,
+                R.string.waypoint, R.drawable.waypoint_marker, -1, null
+            )
+        }
+        //Destination marker if any:
+        if (destinationPoint != null) {
+            markerDestination = updateItineraryMarker(
+                null, destinationPoint, DEST_INDEX,
+                R.string.destination, R.drawable.marker_destination, -1, null
+            )
+        }
+    }
+    fun removePoint(index: Int) {
+        if (index == START_INDEX) {
+            startingPoint = null
+            if (startMarker != null) {
+                startMarker.closeInfoWindow()
+                waypoints.remove(startMarker)
+                startMarker = null
+            }
+        } else if (index == DEST_INDEX) {
+            destinationPoint = null
+            endMarker.closeInfoWindow()
+            waypoints.remove(endMarker)
+            endMarker = null
+        } else {
+            waypoints.removeAt(index)
+            updateUIWithItineraryMarkers()
+        }
+        getRoadAsync()
+    }
+
+    private fun displayToast(s:String){
+        Toast.makeText(applicationContext, "$s Permission Granted",Toast.LENGTH_SHORT).show()
     }
 
     private fun getLocation() {
