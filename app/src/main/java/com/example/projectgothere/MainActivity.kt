@@ -1,8 +1,11 @@
 package com.example.projectgothere
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.gesture.OrientedBoundingBox
+import android.graphics.DashPathEffect
+import android.graphics.Paint
 import android.location.Address
 import android.location.LocationManager
 import android.os.Bundle
@@ -13,6 +16,7 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -33,6 +37,7 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Marker.OnMarkerDragListener
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.views.overlay.infowindow.BasicInfoWindow
 import org.osmdroid.views.overlay.mylocation.DirectedLocationOverlay
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
@@ -55,9 +60,11 @@ private lateinit var roads : MutableList<Road>
 private lateinit var mViaPointInfoWindow: WaypointInfoWindow
 private lateinit var waypoints: ArrayList<GeoPoint>
 private lateinit var mItineraryMarkers : FolderOverlay
+private lateinit var roadNodeMarkers : FolderOverlay
 
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
+    private lateinit var activity : Activity
     private lateinit var roadManager: RoadManager
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
@@ -65,6 +72,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var departureText: AutoCompleteOnPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        this.activity = this
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
         super.onCreate(savedInstanceState)
@@ -228,14 +236,14 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 marker.setOnMarkerDragListener(mItineraryListener)
                 mItineraryMarkers.add(marker)
             }
-            val title = R.string.titleResId
+            val title = R.string.titleResId.toString()
             marker.title = title
             marker.position = p
-            val icon = ResourcesCompat.getDrawable(resources, markerResId, null)
+            val icon = ContextCompat.getDrawable(this, markerResId)
             marker.icon = icon
             marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
             if (imageResId != -1) marker.image =
-                ResourcesCompat.getDrawable(resources, imageResId, null)
+                ContextCompat.getDrawable(this, imageResId)
             marker.relatedObject = index
             map.invalidate()
             if (address != null) marker.snippet =
@@ -296,6 +304,40 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         getPOIAsync(poiTagText.getText().toString())
     }
 
+    fun updateUIWithRoads(roads: Array<Road>?) {
+        roadNodeMarkers.getItems().clear()
+        val textView = findViewById<View>(R.id.routeInfo) as TextView
+        textView.text = ""
+        val mapOverlays = map.overlays
+        if (roadOverlay != null) {
+            for (i in 0 until roadOverlay.length) mapOverlays.remove(roadOverlay.get(i))
+            roadOverlay = null
+        }
+        if (roads == null) return
+        if (roads[0].mStatus == Road.STATUS_TECHNICAL_ISSUE) Toast.makeText(
+            map.context,
+            "Technical issue when getting the route",
+            Toast.LENGTH_SHORT
+        ).show() else if (roads[0].mStatus > Road.STATUS_TECHNICAL_ISSUE) //functional issues
+            Toast.makeText(map.context, "No possible route here", Toast.LENGTH_SHORT).show()
+        roadOverlay = arrayOfNulls<Polyline>(roads.size)
+        for (i in roads.indices) {
+            val roadPolyline = RoadManager.buildRoadOverlay(roads[i])
+            roadOverlay.get(i) = roadPolyline
+            val routeDesc = roads[i].getLengthDurationText(this, -1)
+            roadPolyline.title = getString(R.string.route) + " - " + routeDesc
+            roadPolyline.infoWindow =
+                BasicInfoWindow(org.osmdroid.bonuspack.R.layout.bonuspack_bubble, map)
+            roadPolyline.relatedObject = i
+            roadPolyline.setOnClickListener(RoadOnClickListener())
+            mapOverlays.add(1, roadPolyline)
+            //we insert the road overlays at the "bottom", just above the MapEventsOverlay,
+            //to avoid covering the other overlays.
+        }
+        selectRoad(0)
+    }
+
+
     private fun setViewOn(bb: BoundingBox?) {
         if (bb != null) {
             map.zoomToBoundingBox(bb, true)
@@ -324,7 +366,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     }
 
     //Async task to reverse-geocode the marker position in a separate thread:
-    private fun ReverseGeocodingTask(vararg params: Marker?) {
+    fun ReverseGeocodingTask(vararg params: Marker?) {
         var marker: Marker? = null
         GlobalScope.async{
             marker = params[0]
@@ -354,9 +396,9 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mItineraryMarkers.closeAllInfoWindows()
         mItineraryMarkers.getItems().clear()
         //Start marker:
-        if (startPoint != null) {
-            markerStart = updateItineraryMarker(
-                null, startPoint, START_INDEX,
+        if (startingPoint != null) {
+            startMarker = updateItineraryMarker(
+                null, startingPoint, START_INDEX,
                 R.string.departure, R.drawable.marker_departure, -1, null
             )
         }
@@ -369,7 +411,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         }
         //Destination marker if any:
         if (destinationPoint != null) {
-            markerDestination = updateItineraryMarker(
+            endMarker = updateItineraryMarker(
                 null, destinationPoint, DEST_INDEX,
                 R.string.destination, R.drawable.marker_destination, -1, null
             )
