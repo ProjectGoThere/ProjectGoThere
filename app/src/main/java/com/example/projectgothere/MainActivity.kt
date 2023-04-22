@@ -248,7 +248,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             map.invalidate()
             if (address != null) marker.snippet =
                 address else  //Start geocoding task to get the address and update the Marker description:
-                ReverseGeocodingTask().execute(marker)
+                ReverseGeocodingTask(marker)
             return marker
         }
     private fun getRoadAsync() {
@@ -386,7 +386,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             //update location:
             MainActivity().ReverseGeocodingTask(marker)
             //update route:
-            getRoadAsync()
+            MainActivity().getRoadAsync()
         }
 
         override fun onMarkerDragStart(marker: Marker) {}
