@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.gesture.OrientedBoundingBox
-import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.location.Address
 import android.content.Intent
@@ -97,6 +96,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var roadOverlay: Polyline
     private lateinit var myLocationManager: LocationManager
     private lateinit var departureText: AutoCompleteOnPreferences
+    private val myLocationOverlay = DirectedLocationOverlay(this)
 
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
     private var extraStops: Int = 2
@@ -160,7 +160,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.invalidate()
 
         val mapController = map.controller
-        val myLocationOverlay = DirectedLocationOverlay(this)
+
         map.overlays.add(myLocationOverlay)
 
         //start
@@ -322,23 +322,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         }
         waypoints.add(destinationPoint)
         UpdateRoadTask(this, waypoints)
-        fun getRoadAsync() {
-            roads
-            var roadStartPoint: GeoPoint? = null
-            roadStartPoint = startingPoint
-            if (roadStartPoint == null || destinationPoint == null) {
-                updateUIWithRoads(roads)
-                return
-            }
-            val waypoints = ArrayList<GeoPoint>(2)
-            waypoints.add(roadStartPoint)
-            //add intermediate via points:
-            for (p in waypoints) {
-                waypoints.add(p)
-            }
-            waypoints.add(destinationPoint)
-            UpdateRoadTask(this).execute(waypoints)
-        }
+
         @Deprecated("Deprecated in Java")
         override fun onPostExecute(foundAdresses: List<Address>?) {
             if (foundAdresses == null) {
@@ -401,6 +385,30 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         )
         GeocodingTask(locationAddress, index)
     }//endHandleSearchButton
+
+    fun selectRoad(roadIndex: Int) {
+        val selectedRoad = roadIndex
+        putRoadNodes(roads.get(roadIndex))
+        //Set route info in the text view:
+        val textView = findViewById<View>(R.id.routeInfo) as TextView
+        textView.setText(roads.get(roadIndex).getLengthDurationText(this, -1))
+        for (i in 0 until roadOverlay.length) {
+            val p: Paint = roadOverlay.get(i).getPaint()
+            if (i == roadIndex) p.setColor(-0x7fffff01) //blue
+            else p.setColor(-0x6f99999a) //grey
+        }
+        map.invalidate()
+    }
+
+    internal class RoadOnClickListener : Polyline.OnClickListener {
+        override fun onClick(polyline: Polyline, mapView: MapView, eventPos: GeoPoint): Boolean {
+            val selectedRoad = polyline.relatedObject as Int
+            selectRoad(selectedRoad)
+            polyline.infoWindowLocation = eventPos
+            polyline.showInfoWindow()
+            return true
+        }
+    }
 
     fun updateUIWithRoads(roads: Array<Road>?) {
         roadNodeMarkers.getItems().clear()

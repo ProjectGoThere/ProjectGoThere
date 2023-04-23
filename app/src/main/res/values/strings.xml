@@ -14,4 +14,5 @@
     <string name="departure">Departure</string>
     <string name="titleResId" />
     <string name="route" />
+    <string name="waypoint" />
 </resources>
