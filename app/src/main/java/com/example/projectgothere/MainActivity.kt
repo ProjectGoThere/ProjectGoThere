@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.gesture.OrientedBoundingBox
-import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.location.Address
 import android.location.LocationManager
@@ -20,7 +19,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.content.res.ResourcesCompat
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import okhttp3.internal.userAgent
@@ -70,6 +68,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var roadOverlay: Polyline
     private lateinit var myLocationManager: LocationManager
     private lateinit var departureText: AutoCompleteOnPreferences
+    private val myLocationOverlay = DirectedLocationOverlay(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         this.activity = this
@@ -115,7 +114,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.invalidate()
 
         val mapController = map.controller
-        val myLocationOverlay = DirectedLocationOverlay(this)
+
         map.overlays.add(myLocationOverlay)
 
         //start
@@ -142,7 +141,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         }) //end
     }
 
-    private fun getAddress(p: GeoPoint): String? {
+    fun getAddress(p: GeoPoint): String? {
         val geocoder = GeocoderNominatim(userAgent)
         val theAddress: String?
         theAddress = try {
@@ -252,15 +251,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             return marker
         }
     private fun getRoadAsync() {
-        roads = null
+        roads
         var roadStartPoint: GeoPoint? = null
-        if (startingPoint != null) {
-            roadStartPoint = startingPoint
-        } else if (myLocationOverlay.isEnabled() && myLocationOverlay.getLocation() != null) {
-            //use my current location as itinerary start point:
-            roadStartPoint = myLocationOverlay.getLocation()
-        }
-        if (roadStartPoint == null || destinationPoint == null) {
+        roadStartPoint = startingPoint
+        if (destinationPoint == null) {
             updateUIWithRoads(roads)
             return
         }
@@ -273,7 +267,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         waypoints.add(destinationPoint)
         UpdateRoadTask(this, waypoints)
     }
-    private fun handleSearchButton(index: Int, editResId: Int) {
+    fun handleSearchButton(index: Int, editResId: Int) {
         val locationEdit = findViewById<View>(editResId) as EditText
         //Hide the soft keyboard:
         val imm: InputMethodManager =
@@ -302,6 +296,30 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         roads = result.toMutableList()
         updateUIWithRoads(result)
         getPOIAsync(poiTagText.getText().toString())
+    }
+
+    fun selectRoad(roadIndex: Int) {
+        val selectedRoad = roadIndex
+        putRoadNodes(roads.get(roadIndex))
+        //Set route info in the text view:
+        val textView = findViewById<View>(R.id.routeInfo) as TextView
+        textView.setText(roads.get(roadIndex).getLengthDurationText(this, -1))
+        for (i in 0 until roadOverlay.length) {
+            val p: Paint = roadOverlay.get(i).getPaint()
+            if (i == roadIndex) p.setColor(-0x7fffff01) //blue
+            else p.setColor(-0x6f99999a) //grey
+        }
+        map.invalidate()
+    }
+
+    internal class RoadOnClickListener : Polyline.OnClickListener {
+        override fun onClick(polyline: Polyline, mapView: MapView, eventPos: GeoPoint): Boolean {
+            val selectedRoad = polyline.relatedObject as Int
+            selectRoad(selectedRoad)
+            polyline.infoWindowLocation = eventPos
+            polyline.showInfoWindow()
+            return true
+        }
     }
 
     fun updateUIWithRoads(roads: Array<Road>?) {
@@ -396,12 +414,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mItineraryMarkers.closeAllInfoWindows()
         mItineraryMarkers.getItems().clear()
         //Start marker:
-        if (startingPoint != null) {
-            startMarker = updateItineraryMarker(
-                null, startingPoint, START_INDEX,
-                R.string.departure, R.drawable.marker_departure, -1, null
-            )
-        }
+        startMarker = updateItineraryMarker(
+            null, startingPoint, START_INDEX,
+            R.string.departure, R.drawable.marker_departure, -1, null
+        )
         //Via-points markers if any:
         for (index in 0 until waypoints.size()) {
             updateItineraryMarker(
@@ -410,12 +426,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             )
         }
         //Destination marker if any:
-        if (destinationPoint != null) {
-            endMarker = updateItineraryMarker(
-                null, destinationPoint, DEST_INDEX,
-                R.string.destination, R.drawable.marker_destination, -1, null
-            )
-        }
+        endMarker = updateItineraryMarker(
+            null, destinationPoint, DEST_INDEX,
+            R.string.destination, R.drawable.marker_destination, -1, null
+        )
     }
     private fun removePoint(index: Int) {
         if (index == START_INDEX) {
