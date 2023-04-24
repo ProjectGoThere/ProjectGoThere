@@ -1,17 +1,26 @@
 package com.example.projectgothere
 
+import android.Manifest
 import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
+import android.os.Build.ID
 import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
+import android.util.Log
 import android.view.View
-import android.Manifest
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.projectgothere.databinding.ActivityMainBinding
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
@@ -25,6 +34,7 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
+import kotlin.random.Random
 
 
 private const val TAG = "MainActivity"
@@ -42,8 +52,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
-    private var extraStops: Int = 0
+    private var extraStops: Int = 1
     private lateinit var binding: ActivityMainBinding
+    private lateinit var completeAddress: String
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -70,7 +82,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             //startActivity(cameraIntent)
         }
 
-        getLocation(map)
+        getLocation()
 
         val startPoint = currentLocation
         val endPoint = GeoPoint(46.7867, -92.1005)
@@ -99,6 +111,11 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.invalidate()
     }
 
+    private fun rand(start: Int, end: Int): Int {
+        require(!(start > end || end - start + 1 > Int.MAX_VALUE)) { "Illegal Argument" }
+        return Random(System.nanoTime()).nextInt(end - start + 1) + start
+    }
+
     private fun getLocation() {
         var location: Location? = null
         val lm = getSystemService(LOCATION_SERVICE) as LocationManager
@@ -117,10 +134,30 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     }
 
     private fun addWaypoints(waypoints: ArrayList<GeoPoint>, extraStops: Int){
-        /*val k = 0
+        var k = 0
         while (k<extraStops){
-            waypoints.add()//specific GeoPoint chosen randomly from database
-        }*/
+            val waypointID = rand(0, 1334)
+            val rootRef = FirebaseDatabase.getInstance().reference
+            val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
+            val valueEventListener: ValueEventListener = object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    for (ds in dataSnapshot.children) {
+                        val eachAddress = ds.getValue(String::class.java)
+                        completeAddress += eachAddress.toString()
+                        Log.d(TAG, eachAddress!!)
+                    }
+                    Toast.makeText(applicationContext, completeAddress, Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    Log.d(TAG, databaseError.message)
+                }
+            }
+            addressRef.addListenerForSingleValueEvent(valueEventListener)
+            k++
+           // change address from written to a GeoPoint
+            // waypoints.add()//specific GeoPoint chosen randomly from database
+        }
         for ((i, item) in waypoints.withIndex()){
             markers.add(Marker(map))
             val currentMarker = markers.elementAt(i)
@@ -129,7 +166,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             map.overlays.add(currentMarker)
         }
     }
-
 
     private fun showRouteSteps(){
         val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
