@@ -52,9 +52,12 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var road: Road
     private lateinit var roadOverlay: Polyline
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
-    private var extraStops: Int = 1
+    private var extraStops: Int = 2
     private lateinit var binding: ActivityMainBinding
-    private lateinit var completeAddress: String
+    private var cityAddress: String? = null
+    private var countyAddress: String? = null
+    private var streetAddress: String? = null
+    private var completeAddress: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
@@ -141,23 +144,31 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
             val valueEventListener: ValueEventListener = object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    var switch = 0
                     for (ds in dataSnapshot.children) {
-                        val eachAddress = ds.getValue(String::class.java)
-                        completeAddress += eachAddress.toString()
-                        Log.d(TAG, eachAddress!!)
+                        when (switch){
+                            0 -> cityAddress = ds.getValue(String::class.java)
+                            1 -> countyAddress = ds.getValue(String::class.java)
+                            2 -> streetAddress = ds.getValue(String::class.java)
+                        }
+                        switch++
                     }
-                    Toast.makeText(applicationContext, completeAddress, Toast.LENGTH_SHORT).show()
+                    completeAddress = "$streetAddress $cityAddress MN"
+                    Log.d(TAG, completeAddress!!)
                 }
 
                 override fun onCancelled(databaseError: DatabaseError) {
                     Log.d(TAG, databaseError.message)
                 }
             }
+
             addressRef.addListenerForSingleValueEvent(valueEventListener)
             k++
            // change address from written to a GeoPoint
+
             // waypoints.add()//specific GeoPoint chosen randomly from database
         }
+
         for ((i, item) in waypoints.withIndex()){
             markers.add(Marker(map))
             val currentMarker = markers.elementAt(i)
