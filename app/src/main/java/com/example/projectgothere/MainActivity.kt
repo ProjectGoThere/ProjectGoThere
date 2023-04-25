@@ -40,9 +40,15 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import okhttp3.internal.userAgent
 import okio.IOException
+import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
+import org.osmdroid.bonuspack.location.GeoNamesPOIProvider
 import org.osmdroid.bonuspack.location.GeocoderNominatim
+import org.osmdroid.bonuspack.location.OverpassAPIProvider
+import org.osmdroid.bonuspack.location.POI
 import org.osmdroid.bonuspack.routing.*
+import org.osmdroid.bonuspack.utils.BonusPackHelper
 import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.util.ManifestUtil
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapController
@@ -85,6 +91,7 @@ private lateinit var mViaPointInfoWindow: WaypointInfoWindow
 private lateinit var waypoints: ArrayList<GeoPoint>
 private lateinit var mItineraryMarkers : FolderOverlay
 private lateinit var roadNodeMarkers : FolderOverlay
+private lateinit var mPOIs: ArrayList<POI>
 
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
@@ -97,6 +104,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var myLocationManager: LocationManager
     private lateinit var departureText: AutoCompleteOnPreferences
     private val myLocationOverlay = DirectedLocationOverlay(this)
+    private lateinit var mPoiMarkers:RadiusMarkerClusterer
+    private lateinit var geonamesAccount: String
 
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
     private var extraStops: Int = 2
@@ -121,6 +130,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         val intent = Intent(this,WelcomePageActivity::class.java)
         startActivity(intent)
 
+        geonamesAccount = ManifestUtil.retrieveKey(this, "GEONAMES_ACCOUNT")
         map = findViewById<View>(R.id.map) as MapView
         map.setMultiTouchControls(true)
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
@@ -156,6 +166,15 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.overlays.add(roadOverlay)
 
         showRouteSteps()
+        mPoiMarkers = RadiusMarkerClusterer(this)
+        val clusterIcon =
+            BonusPackHelper.getBitmapFromVectorDrawable(this, R.drawable.marker_poi_cluster)
+        mPoiMarkers.setIcon(clusterIcon)
+        mPoiMarkers.mAnchorV = Marker.ANCHOR_BOTTOM
+        mPoiMarkers.mTextAnchorU = 0.70f
+        mPoiMarkers.mTextAnchorV = 0.27f
+        mPoiMarkers.textPaint.textSize = 12 * resources.displayMetrics.density
+        map.overlays.add(mPoiMarkers)
 
         map.invalidate()
 
@@ -386,6 +405,90 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         GeocodingTask(locationAddress, index)
     }//endHandleSearchButton
 
+    fun getPOIAsync(tag: String?) {
+        mPoiMarkers.items.clear()
+        POILoadingTask(tag)
+    }
+    fun getOSMTag(humanReadableFeature: String): String {
+        val map = BonusPackHelper.parseStringMapResource(
+            applicationContext, R.array.osm_poi_tags
+        )
+        return map[humanReadableFeature.lowercase(Locale.getDefault())]!!
+    }
+    private fun POILoadingTask (vararg params: String?){
+        var mFeatureTag: String
+        var message: String? = null
+        GlobalScope.async {
+            mFeatureTag = params[0]!!
+            val bb = map.boundingBox
+            val result = when (mFeatureTag){
+                null -> null
+                "" -> null
+                "wikipedia" -> {
+                    val poiProvider = GeoNamesPOIProvider(geonamesAccount)
+                    //Get POI inside the bounding box of the current map view:
+                    poiProvider.getPOIInside(bb, 30)
+                }
+                else -> {
+                    val overpassProvider = OverpassAPIProvider()
+                    val osmTag: String = getOSMTag(mFeatureTag)
+                    if (osmTag == null) {
+                        message = "$mFeatureTag is not a valid feature."
+                        null
+                    }
+                    val oUrl = overpassProvider.urlForPOISearch(osmTag, bb, 100, 10)
+                    overpassProvider.getPOIsFromUrl(oUrl)
+                }
+            }
+            if (result != null) {
+                mPOIs = result
+            }
+            if (mFeatureTag == null || mFeatureTag == "") {
+                //no search, no message
+            } else if (mPOIs == null) {
+                if (message != null) Toast.makeText(
+                    applicationContext,
+                    message,
+                    Toast.LENGTH_LONG
+                ).show() else Toast.makeText(
+                    applicationContext,
+                    "Technical issue when getting $mFeatureTag POI.", Toast.LENGTH_LONG
+                ).show()
+            } else {
+                Toast.makeText(
+                    applicationContext,
+                    mFeatureTag + " found:" + mPOIs.size,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            updateUIWithPOI(mPOIs, mFeatureTag)
+            if (mFeatureTag == "flickr" || mFeatureTag!!.startsWith("picasa") || mFeatureTag == "wikipedia") startAsyncThumbnailsLoading(
+                mPOIs
+            )
+        }
+    }
+    fun updateUIWithPOI(pois: ArrayList<POI>?, featureTag: String?) {
+        if (pois != null) {
+            val poiInfoWindow = POIInfoWindow(map)
+            for (poi in pois) {
+                val poiMarker = Marker(map)
+                poiMarker.title = poi.mType
+                poiMarker.snippet = poi.mDescription
+                poiMarker.position = poi.mLocation
+                var icon = ContextCompat.getDrawable(this, R.drawable.marker_node)
+                poiMarker.setAnchor(Marker.ANCHOR_CENTER, 1.0f)
+                poiMarker.subDescription = poi.mCategory
+                poiMarker.icon = icon
+                poiMarker.relatedObject = poi
+                poiMarker.setInfoWindow(poiInfoWindow)
+                //thumbnail loading moved in async task for better performances.
+                mPoiMarkers.add(poiMarker)
+            }
+        }
+        mPoiMarkers.name = featureTag
+        mPoiMarkers.invalidate()
+        map.invalidate()
+    }
     fun selectRoad(roadIndex: Int) {
         val selectedRoad = roadIndex
         putRoadNodes(roads.get(roadIndex))
