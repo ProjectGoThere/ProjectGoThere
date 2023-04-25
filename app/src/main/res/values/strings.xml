@@ -10,4 +10,5 @@
     <string name="titleResId" />
     <string name="route" />
     <string name="waypoint" />
+    <string name="step" />
 </resources>
