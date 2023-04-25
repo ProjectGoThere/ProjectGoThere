@@ -16,4 +16,8 @@
     <string name="route" />
     <string name="waypoint" />
     <string name="step" />
+    <string name="itinerary_markers_title">Route Waypoints</string>
+    <string name="address">Address</string>
+    <string name="description">Description</string>
+    <string name="title">Title</string>
 </resources>

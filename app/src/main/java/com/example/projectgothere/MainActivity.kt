@@ -87,7 +87,6 @@ private lateinit var waypoints: MutableList<GeoPoint>
 private lateinit var mItineraryMarkers : FolderOverlay
 private lateinit var roadNodeMarkers : FolderOverlay
 private var mPOIs: ArrayList<POI>? = null
-private lateinit var poiTagText : AutoCompleteTextView
 
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
@@ -103,6 +102,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var mPoiMarkers:RadiusMarkerClusterer
     private lateinit var geonamesAccount: String
     private lateinit var mViaPointInfoWindow: WaypointInfoWindow
+    private lateinit var poiTagText : AutoCompleteTextView
 
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
     private var extraStops: Int = 2
@@ -158,6 +158,12 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         locationOverlay.enableMyLocation()
         map.overlays.add(locationOverlay)
 
+        mItineraryMarkers = FolderOverlay()
+        mItineraryMarkers.name = getString(R.string.itinerary_markers_title)
+        map.overlays.add(mItineraryMarkers)
+        mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
+        updateUIWithItineraryMarkers()
+
         road = roadManager.getRoad(waypoints)
         roadOverlay = RoadManager.buildRoadOverlay(road)
         map.overlays.add(roadOverlay)
@@ -201,6 +207,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 R.id.editDestination
             )
         }) //end
+
     }
 
     private fun rand(start: Int, end: Int): Int {
@@ -359,6 +366,15 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         )
         GeocodingTask(locationAddress, index)
     }//endHandleSearchButton
+    private fun updateRoadTask(mContext: Context, vararg params: ArrayList<GeoPoint?>){
+        val waypoints = params[0]
+        val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
+        val locale = Locale.getDefault()
+        val result = roadManager.getRoads(waypoints).toMutableList()
+        roads = result
+        updateUIWithRoads(result)
+        getPOIAsync(poiTagText.text.toString())
+    }
 
     private fun getPOIAsync(tag: String?) {
         mPoiMarkers.items.clear()
@@ -442,8 +458,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         //Set route info in the text view:
         val textView = findViewById<View>(R.id.routeInfo) as TextView
         textView.setText(roads.get(roadIndex).getLengthDurationText(this, -1))
-        for (i in 0 until roadOverlay.distance.toInt()) {
-            val p: Paint = roadOverlay.getPaint()
+        for (i in 0 until roadOverlay!!.size) {
+            val p: Paint = roadOverlay!![i].paint
             if (i == roadIndex) p.color = -0x7fffff01 //blue
             else p.color = -0x6f99999a //grey
         }
@@ -465,7 +481,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         val textView = findViewById<View>(R.id.routeInfo) as TextView
         textView.text = ""
         val mapOverlays = map.overlays
-        for (i in 0 until roadOverlay.distance.toInt()) mapOverlays.remove(roadOverlay.get(i))
+        for (i in 0 until roadOverlay!!.size) mapOverlays.remove(roadOverlay!![i])
         roadOverlay
         if (roads[0].mStatus == Road.STATUS_TECHNICAL_ISSUE) Toast.makeText(
             map.context,
@@ -473,10 +489,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             Toast.LENGTH_SHORT
         ).show() else if (roads[0].mStatus > Road.STATUS_TECHNICAL_ISSUE) //functional issues
             Toast.makeText(map.context, "No possible route here", Toast.LENGTH_SHORT).show()
-        roadOverlay = ArrayList<Polyline>(roads.size)
+        roadOverlay = ArrayList<Polyline>()
         for (i in roads.indices) {
             val roadPolyline = RoadManager.buildRoadOverlay(roads[i])
-            roadOverlay!!.get(i) = roadPolyline
+            roadOverlay!![i] = roadPolyline
             val routeDesc = roads[i].getLengthDurationText(this, -1)
             roadPolyline.title = getString(R.string.route) + " - " + routeDesc
             roadPolyline.infoWindow =
@@ -490,15 +506,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         selectRoad(0)
     }
 
-    private fun UpdateRoadTask(mContext: Context, vararg params: ArrayList<GeoPoint?>){
-        val waypoints = params[0]
-        val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
-        val locale = Locale.getDefault()
-        val result = roadManager.getRoads(waypoints)
-        roads = result.toMutableList()
-        updateUIWithRoads(result)
-        getPOIAsync(poiTagText.getText().toString())
-    }
 
     private fun setViewOn(bb: BoundingBox?) {
         if (bb != null) {
@@ -612,13 +619,13 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             startingPoint = null
             if (startMarker != null) {
                 startMarker!!.closeInfoWindow()
-                waypoints.remove(startMarker)
+                mItineraryMarkers.remove(startMarker)
                 startMarker = null
             }
         } else if (index == DEST_INDEX) {
             destinationPoint = null
             endMarker?.closeInfoWindow()
-            waypoints.remove(endMarker)
+            mItineraryMarkers.remove(endMarker)
             endMarker = null
         } else {
             waypoints.removeAt(index)
