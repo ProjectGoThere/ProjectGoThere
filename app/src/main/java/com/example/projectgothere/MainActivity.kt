@@ -3,7 +3,6 @@ package com.example.projectgothere
 import android.Manifest
 import android.app.Activity
 import android.content.Context
-import android.gesture.OrientedBoundingBox
 import android.graphics.Paint
 import android.location.Address
 import android.content.Intent
@@ -17,10 +16,7 @@ import android.util.Log
 import android.preference.PreferenceManager
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.projectgothere.databinding.ActivityMainBinding
@@ -59,6 +55,7 @@ import org.osmdroid.views.overlay.Marker.OnMarkerDragListener
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.infowindow.BasicInfoWindow
+import org.osmdroid.views.overlay.infowindow.MarkerInfoWindow
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import org.osmdroid.views.overlay.mylocation.DirectedLocationOverlay
@@ -79,10 +76,10 @@ private const val SHARED_PREFS_APPKEY = "Project GoThere"
 private const val PREF_LOCATIONS_KEY = "PREF_LOCATIONS"
 private const val START_INDEX = -2
 private const val DEST_INDEX = -1
-private lateinit var startingPoint: GeoPoint
-private lateinit var destinationPoint: GeoPoint
-private lateinit var startMarker : Marker
-private lateinit var endMarker : Marker
+private var startingPoint: GeoPoint? = null
+private var destinationPoint: GeoPoint? = null
+private var startMarker : Marker? = null
+private var endMarker : Marker? = null
 private lateinit var mapController: MapController
 private lateinit var map : MapView
 private lateinit var destinationPolygon: Polygon
@@ -92,6 +89,7 @@ private lateinit var waypoints: ArrayList<GeoPoint>
 private lateinit var mItineraryMarkers : FolderOverlay
 private lateinit var roadNodeMarkers : FolderOverlay
 private lateinit var mPOIs: ArrayList<POI>
+private lateinit var poiTagText : AutoCompleteTextView
 
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
@@ -100,7 +98,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private lateinit var waypoints: ArrayList<GeoPoint>
     private lateinit var markers: ArrayList<Marker>
     private lateinit var road: Road
-    private lateinit var roadOverlay: Polyline
+    private lateinit var roadOverlay: MutableList<Polyline>
     private lateinit var myLocationManager: LocationManager
     private lateinit var departureText: AutoCompleteOnPreferences
     private val myLocationOverlay = DirectedLocationOverlay(this)
@@ -246,7 +244,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             geocoder.setOptions(true) //ask for enclosing polygon (if any)
             val foundAddresses =
                 try {
-                    val viewbox: OrientedBoundingBox
+                    val viewbox: kotlin.collections.Map
                     geocoder.getFromLocationName(
                         locationAddress, 1,
                         viewbox.latSouth, viewbox.lonEast,
@@ -256,7 +254,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                     null
                 }
             if (foundAddresses == null) {
-                Toast.makeText(this, "Geocoding error", Toast.LENGTH_SHORT).show()
+                Toast.makeText(applicationContext, "Geocoding error", Toast.LENGTH_SHORT).show()
             } else if (foundAddresses.size == 0) { //if no address found, display an error
                 Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT).show()
             } else {
@@ -462,9 +460,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 ).show()
             }
             updateUIWithPOI(mPOIs, mFeatureTag)
-            if (mFeatureTag == "flickr" || mFeatureTag!!.startsWith("picasa") || mFeatureTag == "wikipedia") startAsyncThumbnailsLoading(
-                mPOIs
-            )
         }
     }
     fun updateUIWithPOI(pois: ArrayList<POI>?, featureTag: String?) {
@@ -475,7 +470,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 poiMarker.title = poi.mType
                 poiMarker.snippet = poi.mDescription
                 poiMarker.position = poi.mLocation
-                var icon = ContextCompat.getDrawable(this, R.drawable.marker_node)
+                val icon = ContextCompat.getDrawable(this, R.drawable.marker_node)
                 poiMarker.setAnchor(Marker.ANCHOR_CENTER, 1.0f)
                 poiMarker.subDescription = poi.mCategory
                 poiMarker.icon = icon
@@ -495,8 +490,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         //Set route info in the text view:
         val textView = findViewById<View>(R.id.routeInfo) as TextView
         textView.setText(roads.get(roadIndex).getLengthDurationText(this, -1))
-        for (i in 0 until roadOverlay.length) {
-            val p: Paint = roadOverlay.get(i).getPaint()
+        for (i in 0 until roadOverlay.distance.toInt()) {
+            val p: Paint = roadOverlay.getPaint()
             if (i == roadIndex) p.setColor(-0x7fffff01) //blue
             else p.setColor(-0x6f99999a) //grey
         }
@@ -506,30 +501,27 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     internal class RoadOnClickListener : Polyline.OnClickListener {
         override fun onClick(polyline: Polyline, mapView: MapView, eventPos: GeoPoint): Boolean {
             val selectedRoad = polyline.relatedObject as Int
-            selectRoad(selectedRoad)
+            MainActivity().selectRoad(selectedRoad)
             polyline.infoWindowLocation = eventPos
             polyline.showInfoWindow()
             return true
         }
     }
 
-    fun updateUIWithRoads(roads: Array<Road>?) {
+    fun updateUIWithRoads(roads: MutableList<Road>) {
         roadNodeMarkers.getItems().clear()
         val textView = findViewById<View>(R.id.routeInfo) as TextView
         textView.text = ""
         val mapOverlays = map.overlays
-        if (roadOverlay != null) {
-            for (i in 0 until roadOverlay.length) mapOverlays.remove(roadOverlay.get(i))
-            roadOverlay = null
-        }
-        if (roads == null) return
+        for (i in 0 until roadOverlay.distance.toInt()) mapOverlays.remove(roadOverlay.get(i))
+        roadOverlay
         if (roads[0].mStatus == Road.STATUS_TECHNICAL_ISSUE) Toast.makeText(
             map.context,
             "Technical issue when getting the route",
             Toast.LENGTH_SHORT
         ).show() else if (roads[0].mStatus > Road.STATUS_TECHNICAL_ISSUE) //functional issues
             Toast.makeText(map.context, "No possible route here", Toast.LENGTH_SHORT).show()
-        roadOverlay = arrayOfNulls<Polyline>(roads.size)
+        roadOverlay = MutableList<Polyline>(roads.size)
         for (i in roads.indices) {
             val roadPolyline = RoadManager.buildRoadOverlay(roads[i])
             roadOverlay.get(i) = roadPolyline
@@ -621,7 +613,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             )
         }
         //Via-points markers if any:
-        for (index in 0 until waypoints.size()) {
+        for (index in 0 until waypoints.size) {
             updateItineraryMarker(
                 null, waypoints.get(index), index,
                 R.string.waypoint, R.drawable.waypoint_marker, -1, null
@@ -635,17 +627,45 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             )
         }
     }
+
+    private fun putRoadNodes(road: Road) {
+        roadNodeMarkers.getItems().clear()
+        val icon = ResourcesCompat.getDrawable(resources, R.drawable.marker_node, null)
+        val n = road.mNodes.size
+        val infoWindow = MarkerInfoWindow(org.osmdroid.bonuspack.R.layout.bonuspack_bubble, map)
+        val iconIds = resources.obtainTypedArray(R.array.direction_icons)
+        for (i in 0 until n) {
+            val node = road.mNodes[i]
+            val instructions = if (node.mInstructions == null) "" else node.mInstructions
+            val nodeMarker = Marker(map)
+            nodeMarker.title = getString(R.string.step) + " " + (i + 1)
+            nodeMarker.snippet = instructions
+            nodeMarker.subDescription =
+                Road.getLengthDurationText(this, node.mLength, node.mDuration)
+            nodeMarker.position = node.mLocation
+            nodeMarker.icon = icon
+            nodeMarker.setInfoWindow(infoWindow) //use a shared infowindow.
+            val iconId = iconIds.getResourceId(node.mManeuverType, R.drawable.ic_empty)
+            if (iconId != R.drawable.ic_empty) {
+                val image = ResourcesCompat.getDrawable(resources, iconId, null)
+                nodeMarker.image = image
+            }
+            nodeMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            roadNodeMarkers.add(nodeMarker)
+        }
+        iconIds.recycle()
+    }
     private fun removePoint(index: Int) {
         if (index == START_INDEX) {
             startingPoint = null
             if (startMarker != null) {
-                startMarker.closeInfoWindow()
+                startMarker!!.closeInfoWindow()
                 waypoints.remove(startMarker)
                 startMarker = null
             }
         } else if (index == DEST_INDEX) {
             destinationPoint = null
-            endMarker.closeInfoWindow()
+            endMarker?.closeInfoWindow()
             waypoints.remove(endMarker)
             endMarker = null
         } else {
