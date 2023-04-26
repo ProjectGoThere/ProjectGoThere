@@ -5,9 +5,9 @@
     <string name="welcome3">Go There!</string>
     <string name="welcome_advance">Click the screen to start your trip</string>
     <string name="rat">This app needs permissions to function properly</string>
-    <string name="my_position" />
-    <string name="destination" />
-    <string name="search" />
+    <string name="my_position">Enter departure location…</string>
+    <string name="destination">Enter destination location…</string>
+    <string name="search">Search</string>
     <string name="appwidget_text">EXAMPLE</string>
     <string name="add_widget">Add widget</string>
     <string name="app_widget_description">This is an app widget description</string>

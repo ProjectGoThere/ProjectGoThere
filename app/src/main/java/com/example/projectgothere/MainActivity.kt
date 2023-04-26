@@ -82,10 +82,10 @@ private var endMarker : Marker? = null
 private lateinit var mapController: MapController
 private lateinit var map : MapView
 private lateinit var destinationPolygon: Polygon
-private lateinit var roads : MutableList<Road>
+private var roads : MutableList<Road> = mutableListOf()
 private lateinit var waypoints: MutableList<GeoPoint>
-private lateinit var mItineraryMarkers : FolderOverlay
-private lateinit var roadNodeMarkers : FolderOverlay
+private var mItineraryMarkers = FolderOverlay()
+private var roadNodeMarkers = FolderOverlay()
 private var mPOIs: ArrayList<POI>? = null
 
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
@@ -98,11 +98,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private var roadOverlay: ArrayList<Polyline>? = null
     private lateinit var myLocationManager: LocationManager
     private lateinit var departureText: AutoCompleteOnPreferences
-    private val myLocationOverlay = DirectedLocationOverlay(this)
-    private lateinit var mPoiMarkers:RadiusMarkerClusterer
     private lateinit var geonamesAccount: String
     private lateinit var mViaPointInfoWindow: WaypointInfoWindow
     private lateinit var poiTagText : AutoCompleteTextView
+    private lateinit var mPoiMarkers:RadiusMarkerClusterer
 
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
     private var extraStops: Int = 2
@@ -113,6 +112,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private var completeAddress: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val myLocationOverlay = DirectedLocationOverlay(applicationContext)
         this.activity = this
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -144,15 +144,15 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         val endPoint = GeoPoint(46.7867, -92.1005)
 
         waypoints = ArrayList()
-        waypoints.add(startPoint)
-        waypoints.add(endPoint)
+        waypoints.add(startingPoint!!)
+        waypoints.add(destinationPoint!!)
         markers = ArrayList()
 
         addWaypoints(waypoints, extraStops)
 
         mapController = map.controller as MapController
         mapController.setZoom(9)
-        mapController.setCenter(startPoint)
+        mapController.setCenter(startingPoint)
 
         val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map)
         locationOverlay.enableMyLocation()
@@ -169,7 +169,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.overlays.add(roadOverlay)
 
         showRouteSteps()
-        mPoiMarkers = RadiusMarkerClusterer(this)
+        val mPoiMarkers: RadiusMarkerClusterer = RadiusMarkerClusterer(this)
         val clusterIcon =
             BonusPackHelper.getBitmapFromVectorDrawable(this, R.drawable.marker_poi_cluster)
         mPoiMarkers.setIcon(clusterIcon)
@@ -178,8 +178,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mPoiMarkers.mTextAnchorV = 0.27f
         mPoiMarkers.textPaint.textSize = 12 * resources.displayMetrics.density
         map.overlays.add(mPoiMarkers)
-
-        map.invalidate()
 
         val mapController = map.controller
 
@@ -207,7 +205,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 R.id.editDestination
             )
         }) //end
-
+        map.invalidate()
     }
 
     private fun rand(start: Int, end: Int): Int {
@@ -297,9 +295,9 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
     private val mItineraryListener: OnItineraryMarkerDragListener = OnItineraryMarkerDragListener()
     private fun updateItineraryMarker(
-            marker: Marker?, p: GeoPoint?, index: Int,
+            inMarker: Marker?, p: GeoPoint?, index: Int,
             titleResId: Int, markerResId: Int, imageResId: Int, address: String?): Marker {
-            var marker = marker
+            var marker = inMarker
             if (marker == null) {
                 marker = Marker(map)
                 marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
@@ -324,25 +322,19 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             return marker
         }
     private fun getRoadAsync() {
-        roads = null
-        var roadStartPoint: GeoPoint? = null
-        if (startingPoint != null) {
-            roadStartPoint = startingPoint
-        } else if (myLocationOverlay.isEnabled() && myLocationOverlay.getLocation() != null) {
-            //use my current location as itinerary start point:
-            roadStartPoint = myLocationOverlay.getLocation()
-        }
-        if (roadStartPoint == null || destinationPoint == null) {
+        roads.clear()
+        var roadStartPoint = startingPoint!!
+        if (destinationPoint == null) {
             updateUIWithRoads(roads)
             return
         }
-        val waypoints = ArrayList<GeoPoint?>(2)
+        val waypoints = ArrayList<GeoPoint>(2)
         waypoints.add(roadStartPoint)
         //add intermediate via points:
         for (p in waypoints) {
             waypoints.add(p)
         }
-        waypoints.add(destinationPoint)
+        waypoints.add(destinationPoint!!)
         updateRoadTask(this, waypoints)
     }
     private fun handleSearchButton(index: Int, editResId: Int) {
@@ -366,7 +358,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         )
         GeocodingTask(locationAddress, index)
     }//endHandleSearchButton
-    private fun updateRoadTask(mContext: Context, vararg params: ArrayList<GeoPoint?>){
+    private fun updateRoadTask(mContext: Context, vararg params: ArrayList<GeoPoint>){
         val waypoints = params[0]
         val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
         val locale = Locale.getDefault()
@@ -565,7 +557,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mItineraryMarkers.closeAllInfoWindows()
         mItineraryMarkers.getItems().clear()
         //Start marker:
-        if (startingPoint != null) {
+        if (startMarker != null) {
             startMarker = updateItineraryMarker(
                 null, startingPoint, START_INDEX,
                 R.string.departure, R.drawable.marker_departure, -1, null
@@ -579,10 +571,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             )
         }
         //Destination marker if any:
-        if (destinationPoint != null) {
+        if (endMarker != null) {
             endMarker = updateItineraryMarker(
                 null, destinationPoint, DEST_INDEX,
-                R.string.destination, R.drawable.marker_destination, -1, null
+                R.string.destination, R.drawable.marker_departure, -1, null
             )
         }
     }
@@ -695,36 +687,39 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
     private fun showRouteSteps(){
         val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
-        for(i in 0 until road.mNodes.size){
-            val node = road.mNodes[i]
-            val nodeMarker = Marker(map)
-            nodeMarker.position = node.mLocation
-            nodeMarker.icon = nodeIcon
-            nodeMarker.title = "Step $i"
-            nodeMarker.snippet = node.mInstructions
-            nodeMarker.subDescription = Road.getLengthDurationText(this,node.mLength,node.mDuration)
-            val icon = when (node.mManeuverType){
-                //roundabout
-                29 -> ContextCompat.getDrawable(this,R.drawable.ic_roundabout)
-                //straight
-                2 -> ContextCompat.getDrawable(this,R.drawable.ic_continue)
-                //slight left
-                3 -> ContextCompat.getDrawable(this,R.drawable.ic_slight_left)
-                //left turn
-                4 -> ContextCompat.getDrawable(this, R.drawable.ic_turn_left)
-                //sharp left
-                5 -> ContextCompat.getDrawable(this,R.drawable.ic_sharp_left)
-                //exit right/slight right
-                1, 6 -> ContextCompat.getDrawable(this,R.drawable.ic_slight_right)
-                //right turn
-                7 -> ContextCompat.getDrawable(this,R.drawable.ic_turn_right)
-                //sharp right
-                8 -> ContextCompat.getDrawable(this, R.drawable.ic_sharp_right)
-                20 -> ContextCompat.getDrawable(this,R.drawable.ic_continue)
-                else -> null
+        for (j in 0 until roads.size) {
+            for (i in 0 until roads[j].mNodes.size) {
+                val node = roads[j].mNodes[i]
+                val nodeMarker = Marker(map)
+                nodeMarker.position = node.mLocation
+                nodeMarker.icon = nodeIcon
+                nodeMarker.title = "Step $i"
+                nodeMarker.snippet = node.mInstructions
+                nodeMarker.subDescription =
+                    Road.getLengthDurationText(this, node.mLength, node.mDuration)
+                val icon = when (node.mManeuverType) {
+                    //roundabout
+                    29 -> ContextCompat.getDrawable(this, R.drawable.ic_roundabout)
+                    //straight
+                    2 -> ContextCompat.getDrawable(this, R.drawable.ic_continue)
+                    //slight left
+                    3 -> ContextCompat.getDrawable(this, R.drawable.ic_slight_left)
+                    //left turn
+                    4 -> ContextCompat.getDrawable(this, R.drawable.ic_turn_left)
+                    //sharp left
+                    5 -> ContextCompat.getDrawable(this, R.drawable.ic_sharp_left)
+                    //exit right/slight right
+                    1, 6 -> ContextCompat.getDrawable(this, R.drawable.ic_slight_right)
+                    //right turn
+                    7 -> ContextCompat.getDrawable(this, R.drawable.ic_turn_right)
+                    //sharp right
+                    8 -> ContextCompat.getDrawable(this, R.drawable.ic_sharp_right)
+                    20 -> ContextCompat.getDrawable(this, R.drawable.ic_continue)
+                    else -> null
+                }
+                nodeMarker.image = icon
+                map.overlays.add(nodeMarker)
             }
-            nodeMarker.image = icon
-            map.overlays.add(nodeMarker)
         }
     }
     private fun displayToast(s:String){
