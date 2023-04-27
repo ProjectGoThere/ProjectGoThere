@@ -20,4 +20,35 @@
     <string name="address">Address</string>
     <string name="description">Description</string>
     <string name="title">Title</string>
+    <string name="filter">Filter by</string>
+    <string name="stopsDesired">Stops Desired</string>
+    <string name="empty" />
+
+    <string-array name="propTypes">
+        <item>Filter by</item>
+        <item>Bridge</item>
+        <item>Business</item>
+        <item>Church</item>
+        <item>Cultural</item>
+        <item>Government</item>
+        <item>Historical Marker</item>
+        <item>House</item>
+        <item>Library</item>
+        <item>Miscellaneous</item>
+        <item>Neighborhood</item>
+        <item>Recreation</item>
+        <item>Scenic</item>
+        <item>School</item>
+        <item>Transportation</item>
+    </string-array>
+
+    <string-array name="amtStopsDesired">
+        <item>Stops Desired</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+    </string-array>
+
 </resources>
