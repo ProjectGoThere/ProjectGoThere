@@ -68,8 +68,7 @@ private const val TAG = "MainActivity"
 private const val LOCATION_CODE = 101
 private const val CAM_CODE = 102
 private const val req_code = 100
-private val permList = arrayOf(Manifest.permission.CAMERA,Manifest.permission.READ_EXTERNAL_STORAGE,
-    Manifest.permission.ACCESS_FINE_LOCATION)
+private val permList = arrayOf(Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION)
 private const val SHARED_PREFS_APPKEY = "Project GoThere"
 private const val PREF_LOCATIONS_KEY = "PREF_LOCATIONS"
 private const val START_INDEX = -2
@@ -739,13 +738,15 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         Toast.makeText(applicationContext, "$s Permission Granted", Toast.LENGTH_SHORT).show()
     }
     private fun handlePermissions(){
-        if (EasyPermissions.hasPermissions(this, *permList)) {
-            Toast.makeText(this, "Permissions Granted", Toast.LENGTH_SHORT).show()
-        } else {
-            EasyPermissions.requestPermissions(
-                this, R.string.rat.toString(),
-                req_code, *permList
-            )
+        MainScope().async {
+            if (EasyPermissions.hasPermissions(applicationContext, *permList)) {
+                Toast.makeText(applicationContext, "Permissions Granted", Toast.LENGTH_SHORT).show()
+            } else {
+                EasyPermissions.requestPermissions(
+                    this@MainActivity, R.string.rat.toString(),
+                    req_code, *permList
+                )
+            }
         }
     }
     override fun onRequestPermissionsResult(
@@ -754,19 +755,23 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        EasyPermissions.onRequestPermissionsResult(requestCode,permissions,grantResults,this)
+        EasyPermissions.onRequestPermissionsResult(requestCode,permissions,grantResults,this@MainActivity)
     }
     override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
         when (requestCode){
             101 -> displayToast("Location")
             102 -> displayToast("Camera")
+            100 -> displayToast("All")
         }
     }
     override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
-        if (EasyPermissions.somePermissionPermanentlyDenied(this,perms)){
-            AppSettingsDialog.Builder(this).build().show()
-        } else {
-            Toast.makeText(applicationContext,"Permission Denied", Toast.LENGTH_SHORT).show()
+        MainScope().async {
+            Log.d(TAG, "onPermissionsDenied:" + requestCode + ":" + perms.toString());
+            if (EasyPermissions.somePermissionPermanentlyDenied(this@MainActivity, perms)) {
+                AppSettingsDialog.Builder(this@MainActivity).build().show()
+            } else {
+                Toast.makeText(applicationContext, "Permission Denied", Toast.LENGTH_SHORT).show()
+            }
         }
     }
     override fun onResume() {
