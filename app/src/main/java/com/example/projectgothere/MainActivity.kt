@@ -16,7 +16,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.async
 import okhttp3.internal.userAgent
 import okio.IOException
@@ -186,7 +186,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
     private fun GeocodingTask(vararg params: Any){
         var mIndex = 0
-        GlobalScope.async {
+        MainScope().async {
             val locationAddress = params[0] as String
             mIndex = params[1] as Int
             val geocoder = GeocoderNominatim(userAgent)
@@ -305,13 +305,15 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         GeocodingTask(locationAddress, index)
     }//endHandleSearchButton
     private fun updateRoadTask(mContext: Context, vararg params: ArrayList<GeoPoint>){
-        val waypoints = params[0]
-        val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
-        val locale = Locale.getDefault()
-        val result = roadManager.getRoads(waypoints).toMutableList()
-        roads = result
-        updateUIWithRoads(result)
-        getPOIAsync(poiTagText.text.toString())
+        MainScope().async {
+            val waypoints = params[0]
+            val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
+            val locale = Locale.getDefault()
+            val result = roadManager.getRoads(waypoints).toMutableList()
+            roads = result
+            updateUIWithRoads(result)
+            getPOIAsync(poiTagText.text.toString())
+        }
     }
 
     private fun getPOIAsync(tag: String?) {
@@ -327,7 +329,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private fun pOILoadingTask (vararg params: String?){
         var mFeatureTag: String
         var message: String? = null
-        GlobalScope.async {
+        MainScope().async {
             mFeatureTag = params[0]!!
             val bb = map.boundingBox
             val result = when (mFeatureTag){
@@ -466,7 +468,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     //Async task to reverse-geocode the marker position in a separate thread:
     private fun reverseGeocodingTask(vararg params: Marker?) {
         var marker: Marker? = null
-        GlobalScope.async{
+        MainScope().async{
             marker = params[0]
             val result = getAddress(marker!!.position)
             marker!!.snippet = result
