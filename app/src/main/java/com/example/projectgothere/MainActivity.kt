@@ -322,7 +322,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             return marker
         }
     private fun getRoadAsync() {
-        roads.clear()
         var roadStartPoint = startingPoint!!
         if (destinationPoint == null) {
             updateUIWithRoads(roads)
@@ -610,17 +609,33 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     }
     private fun removePoint(index: Int) {
         if (index == START_INDEX) {
-            startingPoint = null
             if (startMarker != null) {
                 startMarker!!.closeInfoWindow()
                 mItineraryMarkers.remove(startMarker)
                 startMarker = null
             }
+            if (waypoints.size > 2){
+                startingPoint = waypoints[1]
+                waypoints.removeAt(0)
+            }
+            else {
+                waypoints.removeAt(0)
+                startingPoint = null
+            }
         } else if (index == DEST_INDEX) {
-            destinationPoint = null
-            endMarker?.closeInfoWindow()
-            mItineraryMarkers.remove(endMarker)
-            endMarker = null
+            if (endMarker != null) {
+                endMarker!!.closeInfoWindow()
+                mItineraryMarkers.remove(endMarker)
+                endMarker = null
+            }
+            if (waypoints.size > 2){
+                startingPoint = waypoints[1]
+                waypoints.removeAt(0)
+            }
+            else {
+                waypoints.removeAt(0)
+                startingPoint = null
+            }
         } else {
             waypoints.removeAt(index)
             updateUIWithItineraryMarkers()
