@@ -82,7 +82,7 @@ private lateinit var mapController: MapController
 private lateinit var map : MapView
 private lateinit var destinationPolygon: Polygon
 private var roads : MutableList<Road> = mutableListOf()
-private lateinit var waypoints: MutableList<GeoPoint>
+private lateinit var waypoints: ArrayList<GeoPoint>
 private var mItineraryMarkers = FolderOverlay()
 private var roadNodeMarkers = FolderOverlay()
 private var mPOIs: ArrayList<POI>? = null
@@ -91,7 +91,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
     private lateinit var activity : Activity
     private lateinit var roadManager: RoadManager
-    private lateinit var waypoints: ArrayList<GeoPoint>
     private lateinit var markers: ArrayList<Marker>
     private lateinit var road: Road
     private var roadOverlay: ArrayList<Polyline>? = null
@@ -142,9 +141,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         startingPoint = currentLocation
         destinationPoint = GeoPoint(46.7867, -92.1005)
 
-        waypoints = ArrayList<GeoPoint>()
-        waypoints.add(startingPoint!!)
-        waypoints.add(destinationPoint!!)
         waypoints = ArrayList()
         waypoints.add(startingPoint!!)
         waypoints.add(destinationPoint!!)
@@ -166,9 +162,9 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
         updateUIWithItineraryMarkers()
 
-        road = roadManager.getRoad(waypoints)
-        roadOverlay = RoadManager.buildRoadOverlay(road)
-        map.overlays.add(roadOverlay)
+        //road = roadManager.getRoad(waypoints)
+        //roadOverlay = RoadManager.buildRoadOverlay(road)
+        //map.overlays.add(roadOverlay)
 
         showRouteSteps()
         val mPoiMarkers: RadiusMarkerClusterer = RadiusMarkerClusterer(this)
@@ -180,10 +176,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mPoiMarkers.mTextAnchorV = 0.27f
         mPoiMarkers.textPaint.textSize = 12 * resources.displayMetrics.density
         map.overlays.add(mPoiMarkers)
-
-        val mapController = map.controller
-
-        map.overlays.add(myLocationOverlay)
 
         //start
         val departureText = findViewById<View>(R.id.editDeparture) as AutoCompleteOnPreferences
@@ -610,7 +602,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         }
         iconIds.recycle()
     }
-    private fun removePoint(index: Int) {
+    fun removePoint(index: Int) {
         if (index == START_INDEX) {
             if (startMarker != null) {
                 startMarker!!.closeInfoWindow()
