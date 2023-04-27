@@ -60,9 +60,8 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import org.osmdroid.views.overlay.mylocation.DirectedLocationOverlay
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
-import kotlin.random.Random
-import java.net.HttpURLConnection
 import java.util.*
+import kotlin.random.Random
 
 
 private const val TAG = "MainActivity"
@@ -140,9 +139,12 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             //startActivity(cameraIntent)
         }
 
-        val startPoint = currentLocation
-        val endPoint = GeoPoint(46.7867, -92.1005)
+        startingPoint = currentLocation
+        destinationPoint = GeoPoint(46.7867, -92.1005)
 
+        waypoints = ArrayList<GeoPoint>()
+        waypoints.add(startingPoint!!)
+        waypoints.add(destinationPoint!!)
         waypoints = ArrayList()
         waypoints.add(startingPoint!!)
         waypoints.add(destinationPoint!!)
@@ -445,7 +447,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         }
         mPoiMarkers.name = featureTag
         mPoiMarkers.invalidate()
-        map.invalidate()
+
     }
     fun selectRoad(roadIndex: Int) {
         val selectedRoad = roadIndex
@@ -567,7 +569,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             )
         }
         //Via-points markers if any:
-        for (index in 1 until waypoints.size-1) {
+        for (index in 1 until waypoints.size - 1) {
             updateItineraryMarker(
                 null, waypoints[index], index,
                 R.string.waypoint, R.drawable.waypoint_marker, -1, null
@@ -581,7 +583,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             )
         }
     }
-
     private fun putRoadNodes(road: Road) {
         roadNodeMarkers.items.clear()
         val icon = ResourcesCompat.getDrawable(resources, R.drawable.marker_node, null)
