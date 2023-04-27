@@ -205,6 +205,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                         startMarker, startingPoint, START_INDEX,
                         R.string.departure, R.drawable.marker_departure, -1, addressDisplayName
                     )
+                    waypoints.add(0, startingPoint!!)
                     mapController.setCenter(startingPoint)
                 } else if (mIndex == DEST_INDEX) {
                     destinationPoint = GeoPoint(address.latitude, address.longitude)
@@ -212,6 +213,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                         endMarker, destinationPoint, DEST_INDEX,
                         R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
                     )
+                    waypoints.add(destinationPoint!!)
                     mapController.setCenter(destinationPoint)
                 }
                 getRoadAsync()
@@ -492,7 +494,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             )
         }
         //Via-points markers if any:
-        for (index in 0 until waypoints.size) {
+        for (index in 1 until waypoints.size-1) {
             updateItineraryMarker(
                 null, waypoints[index], index,
                 R.string.waypoint, R.drawable.waypoint_marker, -1, null
