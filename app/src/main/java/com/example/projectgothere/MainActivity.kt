@@ -162,6 +162,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
         updateUIWithItineraryMarkers()
 
+        //need to figure out how to make this work for the routing
         //road = roadManager.getRoad(waypoints)
         //roadOverlay = RoadManager.buildRoadOverlay(road)
         //map.overlays.add(roadOverlay)
