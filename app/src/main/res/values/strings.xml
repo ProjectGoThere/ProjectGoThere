@@ -5,4 +5,19 @@
     <string name="welcome3">Go There!</string>
     <string name="welcome_advance">Click the screen to start your trip</string>
     <string name="rat">This app needs permissions to function properly</string>
+    <string name="my_position">Enter departure location…</string>
+    <string name="destination">Enter destination location…</string>
+    <string name="search">Search</string>
+    <string name="appwidget_text">EXAMPLE</string>
+    <string name="add_widget">Add widget</string>
+    <string name="app_widget_description">This is an app widget description</string>
+    <string name="departure">Departure</string>
+    <string name="titleResId" />
+    <string name="route" />
+    <string name="waypoint" />
+    <string name="step" />
+    <string name="itinerary_markers_title">Route Waypoints</string>
+    <string name="address">Address</string>
+    <string name="description">Description</string>
+    <string name="title">Title</string>
 </resources>
