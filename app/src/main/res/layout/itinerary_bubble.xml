@@ -42,7 +42,7 @@
     </LinearLayout>
     <Button android:id="@+id/bubble_delete"
         android:background="@drawable/btn_delete"
-        android:text=""
+        android:text="@string/empty"
         android:visibility="visible"
         android:layout_width="48dp"
         android:layout_height="48dp"

@@ -13,6 +13,10 @@ import android.preference.PreferenceManager
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
@@ -86,6 +90,18 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         Configuration.getInstance().userAgentValue = packageName;
         setContentView(R.layout.activity_main)
         handlePermissions()
+
+        val spinPropType : Spinner = findViewById(R.id.propType_dd)
+        val propAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
+            R.array.propTypes, android.R.layout.simple_spinner_item)
+        propAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
+        spinPropType.adapter = propAdapter
+
+        val spinStopsDes : Spinner = findViewById(R.id.stopsDesired_dd)
+        val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
+        R.array.amtStopsDesired, android.R.layout.simple_spinner_item)
+        stopsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
+        spinStopsDes.adapter = stopsAdapter
 
         geonamesAccount = ManifestUtil.retrieveKey(this, "GEONAMES_ACCOUNT")
         map = findViewById<View>(R.id.map) as MapView
