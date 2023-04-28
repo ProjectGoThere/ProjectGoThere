@@ -70,6 +70,7 @@ private const val SHARED_PREFS_APPKEY = "Project GoThere"
 private const val PREF_LOCATIONS_KEY = "PREF_LOCATIONS"
 private const val START_INDEX = -2
 private const val DEST_INDEX = -1
+private var CURRENT_INDEX = -3
 private var startingPoint: GeoPoint? = null
 private var destinationPoint: GeoPoint? = null
 private var currentPoint: GeoPoint? = null
@@ -77,7 +78,7 @@ private var startMarker : Marker? = null
 private var endMarker : Marker? = null
 private var currentMarker: Marker? = null
 private lateinit var map : MapView
-private lateinit var destinationPolygon: Polygon
+private var destinationPolygon: Polygon? = null
 private var roads : MutableList<Road> = mutableListOf()
 private lateinit var waypoints: ArrayList<GeoPoint>
 private var mItineraryMarkers = FolderOverlay()
@@ -88,7 +89,6 @@ private var mPOIs: ArrayList<POI>? = null
 class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
     private lateinit var roadManager: RoadManager
-    private lateinit var markers: ArrayList<Marker>
     private lateinit var road: Road
     private var roadOverlay: ArrayList<Polyline>? = null
     private lateinit var geonamesAccount: String
@@ -137,7 +137,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         waypoints = ArrayList()
         waypoints.add(startingPoint!!)
         waypoints.add(destinationPoint!!)
-        //markers = ArrayList()
 
         map.controller.zoomTo(9)
         map.controller.setCenter(startingPoint)
@@ -231,7 +230,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                     }
                     completeAddress = "$streetAddress $cityAddress MN"
                     Log.d(TAG, completeAddress!!)
-                    geocodingTask(completeAddress!!)
+                    geocodingTask(completeAddress!!, CURRENT_INDEX)
+
                 }
 
                 override fun onCancelled(databaseError: DatabaseError) {
@@ -310,14 +310,15 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                     waypoints.add(destinationPoint!!)
                     map.controller.setCenter(destinationPoint)
                 }
-                else {
+                else if (index == CURRENT_INDEX){
                     currentPoint = GeoPoint(address.latitude, address.longitude)
                     currentMarker = updateItineraryMarker(
-                        currentMarker, currentPoint, mIndex,
+                        currentMarker, currentPoint, index,
                         R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
                     )
                     waypoints.add(currentPoint!!)
                     map.controller.setCenter(currentPoint!!)
+                    CURRENT_INDEX--
 
                 }
                 getRoadAsync()
@@ -365,7 +366,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private fun getRoadAsync() {
         val roadStartPoint = startingPoint!!
         if (destinationPoint == null) {
-            updateUIWithRoads(roads)
+            //updateUIWithRoads(roads)
             return
         }
         val waypoints = ArrayList<GeoPoint>(2)
@@ -404,8 +405,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
             val result = roadManager.getRoads(waypoints).toMutableList()
             roads = result
-            updateUIWithRoads(result)
-            getPOIAsync(poiTagText.text.toString())
+            //updateUIWithRoads(result)
+            //getPOIAsync(poiTagText.text.toString())
         }
     }
 
@@ -485,7 +486,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mPoiMarkers.invalidate()
 
     }
-    fun selectRoad(roadIndex: Int) {
+    /*fun selectRoad(roadIndex: Int) {
         putRoadNodes(roads[roadIndex])
         //Set route info in the text view:
         val textView = findViewById<View>(R.id.routeInfo) as TextView
@@ -496,19 +497,19 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             else p.color = -0x6f99999a //grey
         }
         map.invalidate()
-    }
+    }*/
 
     internal class RoadOnClickListener : Polyline.OnClickListener {
         override fun onClick(polyline: Polyline, mapView: MapView, eventPos: GeoPoint): Boolean {
             val selectedRoad = polyline.relatedObject as Int
-            MainActivity().selectRoad(selectedRoad)
+            //MainActivity().selectRoad(selectedRoad)
             polyline.infoWindowLocation = eventPos
             polyline.showInfoWindow()
             return true
         }
     }
 
-    private fun updateUIWithRoads(roads: MutableList<Road>) {
+    /*private fun updateUIWithRoads(roads: MutableList<Road>) {
         roadNodeMarkers.items.clear()
         val textView = findViewById<View>(R.id.routeInfo) as TextView
         textView.text = ""
@@ -536,7 +537,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             //to avoid covering the other overlays.
         }
         selectRoad(0)
-    }
+    }*/
 
 
     private fun setViewOn(bb: BoundingBox?) {
@@ -546,15 +547,15 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     }
     private fun updateUIWithPolygon(polygon: ArrayList<GeoPoint?>?, name: String?) {
         val mapOverlays = map.overlays
-        val location = mapOverlays.indexOf(destinationPolygon)
+        val location = if (destinationPolygon != null) mapOverlays.indexOf(destinationPolygon) else -1
         destinationPolygon = Polygon()
-        destinationPolygon.setFillColor(0x15FF0080)
-        destinationPolygon.setStrokeColor(-0x7fffff01)
-        destinationPolygon.setStrokeWidth(5.0f)
-        destinationPolygon.title = name
+        destinationPolygon!!.setFillColor(0x15FF0080)
+        destinationPolygon!!.setStrokeColor(-0x7fffff01)
+        destinationPolygon!!.setStrokeWidth(5.0f)
+        destinationPolygon!!.title = name
         var bb: BoundingBox? = null
         if (polygon != null) {
-            destinationPolygon.points = polygon
+            destinationPolygon!!.points = polygon
             bb = BoundingBox.fromGeoPoints(polygon)
         }
         if (location != -1) mapOverlays[location] = destinationPolygon else mapOverlays.add(
