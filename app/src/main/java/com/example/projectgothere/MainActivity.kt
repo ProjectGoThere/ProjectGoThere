@@ -131,18 +131,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         stopsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
         spinStopsDes.adapter = stopsAdapter
 
-        val spinPropType : Spinner = findViewById(R.id.propType_dd)
-        val propAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
-            R.array.propTypes, android.R.layout.simple_spinner_item)
-        propAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
-        spinPropType.adapter = propAdapter
-
-        val spinStopsDes : Spinner = findViewById(R.id.stopsDesired_dd)
-        val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
-        R.array.amtStopsDesired, android.R.layout.simple_spinner_item)
-        stopsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
-        spinStopsDes.adapter = stopsAdapter
-
         geonamesAccount = ManifestUtil.retrieveKey(this, "GEONAMES_ACCOUNT")
         map = binding.map
         map.setMultiTouchControls(true)
