@@ -145,7 +145,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         addWaypoints(waypoints, extraStops)
         updateUIWithItineraryMarkers()
 
-        if (roads != null) showRouteSteps()
+        if (roads != null) updateUIWithRoads(roads!!)
         val mPoiMarkers = RadiusMarkerClusterer(this)
         val clusterIcon =
             BonusPackHelper.getBitmapFromVectorDrawable(this, R.drawable.marker_poi_cluster)
@@ -266,7 +266,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             try {
                 val viewbox = map.boundingBox
                 geocoder.getFromLocationName(
-                    locationAddress, 1,
+                    locationAddress, 3,
                     viewbox.latSouth, viewbox.lonEast,
                     viewbox.latNorth, viewbox.lonWest, false
                 )
@@ -296,7 +296,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                         endMarker, destinationPoint, DEST_INDEX,
                         R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
                     )
-                    waypoints[waypoints.size-1] = destinationPoint!!
+                    waypoints.add(destinationPoint!!)
                     map.controller.setCenter(destinationPoint)
                 }
                 WAYPOINT_INDEX -> {
@@ -364,13 +364,14 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             updateUIWithRoads(roads!!)
             return
         }
-        waypoints = ArrayList<GeoPoint>(2)
-        waypoints.add(roadStartPoint)
+        val newWayPoints = ArrayList<GeoPoint>(2)
+        newWayPoints.add(roadStartPoint!!)
         //add intermediate via points:
         for (p in waypoints) {
-            waypoints.add(p)
+            newWayPoints.add(p)
         }
-        waypoints.add(destinationPoint!!)
+        newWayPoints.add(destinationPoint!!)
+        waypoints = newWayPoints
         updateRoadTask(waypoints)
     }
     private fun handleSearchButton(index: Int, editResId: Int) {
@@ -396,9 +397,11 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     }//endHandleSearchButton
     private fun updateRoadTask(vararg params: ArrayList<GeoPoint>){
         val gpList = params[0]
+        Log.d(TAG, "gpList: $gpList")
         val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
         val result = roadManager.getRoads(gpList)
         roads = result
+        Log.d(TAG, "Roads: "+ roads.toString())
         updateUIWithRoads(roads!!)
         //getPOIAsync(poiTagText.text.toString())
     }
@@ -414,46 +417,45 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         return map[humanReadableFeature.lowercase(Locale.getDefault())]
     }
     private fun pOILoadingTask (vararg params: String?){
-        var mFeatureTag: String?
         var message: String? = null
-            mFeatureTag = params[0]
-            val bb = map.boundingBox
-            val result = when (mFeatureTag){
-                null -> null
-                "" -> null
-                else -> {
-                    val overpassProvider = OverpassAPIProvider()
-                    val osmTag: String? = getOSMTag(mFeatureTag!!)
-                    if (osmTag == null) {
-                        message = "$mFeatureTag is not a valid feature."
-                        null
-                    }
-                    val oUrl = overpassProvider.urlForPOISearch(osmTag, bb, 100, 10)
-                    overpassProvider.getPOIsFromUrl(oUrl)
+        val mFeatureTag = params[0]
+        val bb = map.boundingBox
+        val result = when (mFeatureTag){
+            null -> null
+            "" -> null
+            else -> {
+                val overpassProvider = OverpassAPIProvider()
+                val osmTag: String? = getOSMTag(mFeatureTag)
+                if (osmTag == null) {
+                    message = "$mFeatureTag is not a valid feature."
+                    null
                 }
+                val oUrl = overpassProvider.urlForPOISearch(osmTag, bb, 100, 10)
+                overpassProvider.getPOIsFromUrl(oUrl)
             }
-            if (result != null) {
-                mPOIs = result
-            }
-            if (mFeatureTag == "") {
-                //no search, no message
-            } else if (mPOIs == null) {
-                if (message != null) Toast.makeText(
-                    applicationContext,
-                    message,
-                    Toast.LENGTH_LONG
-                ).show() else Toast.makeText(
-                    applicationContext,
-                    "Technical issue when getting $mFeatureTag POI.", Toast.LENGTH_LONG
-                ).show()
-            } else {
-                Toast.makeText(
-                    applicationContext,
-                    mFeatureTag + " found:" + mPOIs!!.size,
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-            updateUIWithPOI(mPOIs, mFeatureTag)
+        }
+        if (result != null) {
+            mPOIs = result
+        }
+        if (mFeatureTag == "") {
+            //no search, no message
+        } else if (mPOIs == null) {
+            if (message != null) Toast.makeText(
+                applicationContext,
+                message,
+                Toast.LENGTH_LONG
+            ).show() else Toast.makeText(
+                applicationContext,
+                "Technical issue when getting $mFeatureTag POI.", Toast.LENGTH_LONG
+            ).show()
+        } else {
+            Toast.makeText(
+                applicationContext,
+                mFeatureTag + " found:" + mPOIs!!.size,
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        updateUIWithPOI(mPOIs, mFeatureTag)
     }
     private fun updateUIWithPOI(pois: ArrayList<POI>?, featureTag: String?) {
         if (pois != null) {
