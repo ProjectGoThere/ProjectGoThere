@@ -381,12 +381,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             return
         }
         val newWayPoints = ArrayList<GeoPoint>(2)
-        newWayPoints.add(roadStartPoint!!)
         //add intermediate via points:
         for (p in waypoints) {
             newWayPoints.add(p)
         }
-        newWayPoints.add(destinationPoint!!)
         waypoints = newWayPoints
         updateRoadTask(waypoints)
     }
