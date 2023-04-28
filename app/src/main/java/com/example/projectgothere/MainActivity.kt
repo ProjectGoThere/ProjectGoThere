@@ -1,6 +1,7 @@
 package com.example.projectgothere
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.graphics.Paint
 import android.location.Address
@@ -71,8 +72,10 @@ private const val START_INDEX = -2
 private const val DEST_INDEX = -1
 private var startingPoint: GeoPoint? = null
 private var destinationPoint: GeoPoint? = null
+private var currentPoint: GeoPoint? = null
 private var startMarker : Marker? = null
 private var endMarker : Marker? = null
+private var currentMarker: Marker? = null
 private lateinit var map : MapView
 private lateinit var destinationPolygon: Polygon
 private var roads : MutableList<Road> = mutableListOf()
@@ -109,7 +112,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         Configuration.getInstance().userAgentValue = packageName
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        //setContentView(R.layout.activity_main)
+
 
         handlePermissions()
         val intent = Intent(this,WelcomePageActivity::class.java)
@@ -121,7 +124,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
         getLocation()
-        //ContextCompat.getDrawable(this,R.drawable.ic_camera)
+
         binding.cameraButton.setOnClickListener{
             Toast.makeText(applicationContext, "Camera Button is Clickable", Toast.LENGTH_SHORT).show()
             //val cameraIntent = Intent(this, CameraActivity::class.java)
@@ -134,9 +137,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         waypoints = ArrayList()
         waypoints.add(startingPoint!!)
         waypoints.add(destinationPoint!!)
-        markers = ArrayList()
-
-        addWaypoints(waypoints, extraStops)
+        //markers = ArrayList()
 
         map.controller.zoomTo(9)
         map.controller.setCenter(startingPoint)
@@ -150,6 +151,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.overlays.add(mItineraryMarkers)
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
         updateUIWithItineraryMarkers()
+
+        addWaypoints(waypoints, extraStops)
 
         //need to figure out how to make this work for the routing
         //road = roadManager.getRoad(waypoints)
@@ -193,7 +196,55 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         return Random(System.nanoTime()).nextInt(end - start + 1) + start
     }
 
-    private fun getAddress(p: GeoPoint): String {
+    private fun getLocation() {
+        var location: Location? = null
+        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
+        try {
+            location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+        } catch (e: SecurityException) {
+            Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT).show()
+        }
+        if (location != null) {
+            val loc = GeoPoint(
+                (location.latitude),
+                (location.longitude)
+            )
+            currentLocation = loc
+        }
+    }
+    private fun addWaypoints(waypoints: ArrayList<GeoPoint>, extraStops: Int){
+        var k = 0
+        while (k<extraStops){
+            val waypointID = rand(0, 1334)
+            val rootRef = FirebaseDatabase.getInstance().reference
+            val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
+            val valueEventListener: ValueEventListener = object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    var switch = 0
+                    for (ds in dataSnapshot.children) {
+                        when (switch){
+                            0 -> cityAddress = ds.getValue(String::class.java)
+                            1 -> countyAddress = ds.getValue(String::class.java)
+                            2 -> streetAddress = ds.getValue(String::class.java)
+                        }
+                        switch++
+                    }
+                    completeAddress = "$streetAddress $cityAddress MN"
+                    Log.d(TAG, completeAddress!!)
+                    geocodingTask(completeAddress!!)
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    Log.d(TAG, databaseError.message)
+                }
+            }
+
+            addressRef.addListenerForSingleValueEvent(valueEventListener)
+            k++
+        }
+    }
+
+    private fun getAddress(p: GeoPoint): String? {
         val geocoder = GeocoderNominatim(userAgent)
         val theAddress: String? = try {
             val dLatitude = p.latitude
@@ -258,6 +309,16 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                     )
                     waypoints.add(destinationPoint!!)
                     map.controller.setCenter(destinationPoint)
+                }
+                else {
+                    currentPoint = GeoPoint(address.latitude, address.longitude)
+                    currentMarker = updateItineraryMarker(
+                        currentMarker, currentPoint, mIndex,
+                        R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
+                    )
+                    waypoints.add(currentPoint!!)
+                    map.controller.setCenter(currentPoint!!)
+
                 }
                 getRoadAsync()
                 //get and display enclosing polygon:
@@ -620,64 +681,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         getRoadAsync()
     }
 
-    private fun getLocation() {
-        var location: Location? = null
-        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
-        try {
-            location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-        } catch (e: SecurityException) {
-            Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT).show()
-        }
-        if (location != null) {
-            val loc = GeoPoint(
-                (location.latitude),
-                (location.longitude)
-            )
-            currentLocation = loc
-        }
-    }
-
-    private fun addWaypoints(waypoints: ArrayList<GeoPoint>, extraStops: Int){
-        var k = 0
-        while (k<extraStops){
-            val waypointID = rand()
-            val rootRef = FirebaseDatabase.getInstance().reference
-            val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
-            val valueEventListener: ValueEventListener = object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    var switch = 0
-                    for (ds in dataSnapshot.children) {
-                        when (switch){
-                            0 -> cityAddress = ds.getValue(String::class.java)
-                            1 -> countyAddress = ds.getValue(String::class.java)
-                            2 -> streetAddress = ds.getValue(String::class.java)
-                        }
-                        switch++
-                    }
-                    completeAddress = "$streetAddress $cityAddress MN"
-                    Log.d(TAG, completeAddress!!)
-                }
-
-                override fun onCancelled(databaseError: DatabaseError) {
-                    Log.d(TAG, databaseError.message)
-                }
-            }
-
-            addressRef.addListenerForSingleValueEvent(valueEventListener)
-            k++
-           // change address from written to a GeoPoint
-
-            // waypoints.add()//specific GeoPoint chosen randomly from database
-        }
-
-        for ((i, item) in waypoints.withIndex()){
-            markers.add(Marker(map))
-            val currentMarker = markers.elementAt(i)
-            currentMarker.position = item
-            currentMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            map.overlays.add(currentMarker)
-        }
-    }
 
     private fun showRouteSteps(){
         val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
