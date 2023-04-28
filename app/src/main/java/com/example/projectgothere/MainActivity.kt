@@ -321,7 +321,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                         currentMarker, currentPoint, index,
                         R.string.waypoint, R.drawable.waypoint_marker, -1, addressDisplayName
                     )
-                    if (waypoints.size >= 2) waypoints.add(waypoints.size-2, currentPoint!!)
+                    if (destinationPoint != null) waypoints.add(waypoints.size-2, currentPoint!!)
                     else waypoints.add(currentPoint!!)
                     map.controller.setCenter(currentPoint!!)
                 }
