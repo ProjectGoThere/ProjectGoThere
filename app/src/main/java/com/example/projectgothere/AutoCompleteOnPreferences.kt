@@ -71,7 +71,7 @@ class AutoCompleteOnPreferences : AppCompatAutoCompleteTextView {
                 val prefArray = JSONArray(prefString)
                 val result = arrayListOf<String>()
                 for (i in 0 until prefArray.length()) {
-                    result.add(prefArray.getString(i))
+                    result[i] = prefArray.getString(i)
                 }
                 result
             } catch (e: JSONException) {
