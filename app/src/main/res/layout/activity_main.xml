@@ -74,7 +74,7 @@
             android:layout_width="205dp"
             android:layout_height="40dp"
             android:layout_gravity="end"
-            android:spinnerMode="dropdown"/>
+            android:spinnerMode="dropdown" />
     </LinearLayout>
 
         <org.osmdroid.views.MapView
