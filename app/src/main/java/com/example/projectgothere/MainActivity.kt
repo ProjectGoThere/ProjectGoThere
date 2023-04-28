@@ -228,7 +228,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
 
             addressRef.addListenerForSingleValueEvent(valueEventListener)
             k++
-            Log.d(TAG, waypoints.toString())
+            //Log.d(TAG, waypoints.toString())
         }
     }
 
@@ -310,7 +310,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                     map.controller.setCenter(currentPoint!!)
                 }
             }
-            Log.d(TAG,waypoints.toString())
+            Log.d(TAG,"Waypoints: $waypoints")
             getRoadAsync()
             //get and display enclosing polygon:
             if (address.extras.containsKey("polygonpoints")) {
@@ -520,6 +520,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             Toast.makeText(map.context, "No possible route here", Toast.LENGTH_SHORT).show()
         roadOverlay = ArrayList<Polyline>()
         for (i in roads.indices) {
+            Log.d(TAG, "Road number $i")
             val roadPolyline = RoadManager.buildRoadOverlay(roads[i])
             roadOverlay!!.add(roadPolyline)
             val routeDesc = roads[i].getLengthDurationText(this, -1)
