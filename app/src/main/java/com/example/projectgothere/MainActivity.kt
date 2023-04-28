@@ -318,7 +318,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 WAYPOINT_INDEX -> {
                     currentPoint = GeoPoint(address.latitude, address.longitude)
                     currentMarker = updateItineraryMarker(
-                        currentMarker, currentPoint, index,
+                        null, currentPoint, index,
                         R.string.waypoint, R.drawable.waypoint_marker, -1, addressDisplayName
                     )
                     if (destinationPoint != null) waypoints.add(waypoints.size-2, currentPoint!!)
