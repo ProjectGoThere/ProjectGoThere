@@ -218,34 +218,35 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         var k = 0
         while (k<extraStops){
             val waypointID = rand(0, 1334)
-            val rootRef = FirebaseDatabase.getInstance().reference
-            val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
-            val valueEventListener: ValueEventListener = object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    var switch = 0
-                    for (ds in dataSnapshot.children) {
-                        when (switch){
-                            0 -> cityAddress = ds.getValue(String::class.java)
-                            1 -> countyAddress = ds.getValue(String::class.java)
-                            2 -> streetAddress = ds.getValue(String::class.java)
-                        }
-                        switch++
-                    }
-                    completeAddress = "$streetAddress $cityAddress MN"
-                    Log.d(TAG, completeAddress!!)
-                    geocodingTask(completeAddress!!, WAYPOINT_INDEX)
-
-                }
-
-                override fun onCancelled(databaseError: DatabaseError) {
-                    Log.d(TAG, databaseError.message)
-                }
-            }
-
-            addressRef.addListenerForSingleValueEvent(valueEventListener)
+            getDataSnapshot(waypointID)
             k++
             //Log.d(TAG, waypoints.toString())
         }
+    }
+
+    private fun getDataSnapshot(waypointID: Int){
+        val rootRef = FirebaseDatabase.getInstance().reference
+        val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
+        val valueEventListener: ValueEventListener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                for ((switch, ds) in dataSnapshot.children.withIndex()) {
+                    when (switch){
+                        0 -> cityAddress = ds.getValue(String::class.java)
+                        1 -> countyAddress = ds.getValue(String::class.java)
+                        2 -> streetAddress = ds.getValue(String::class.java)
+                    }
+                }
+                completeAddress = "$streetAddress $cityAddress MN"
+                Log.d(TAG, completeAddress!!)
+                geocodingTask(completeAddress!!, WAYPOINT_INDEX)
+
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                Log.d(TAG, databaseError.message)
+            }
+        }
+        addressRef.addListenerForSingleValueEvent(valueEventListener)
     }
 
     private fun getAddress(p: GeoPoint): String? {
@@ -292,7 +293,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         if (foundAddresses == null) {
             Toast.makeText(applicationContext, "Geocoding error", Toast.LENGTH_SHORT).show()
         } else if (foundAddresses.size == 0) { //if no address found, display an error
-            Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT).show()
+            //Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "Else if called")
+            val newWaypointID = rand(0, 1334)
+            getDataSnapshot(newWaypointID)
         } else {
             val address: Address = foundAddresses[0] //get first address
             val addressDisplayName: String? = address.extras.getString("display_name")
