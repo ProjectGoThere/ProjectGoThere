@@ -2,34 +2,27 @@ package com.example.projectgothere
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.graphics.Paint
 import android.location.Address
-import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
-import android.util.Log
 import android.preference.PreferenceManager
+import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.Spinner
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import com.example.projectgothere.databinding.ActivityMainBinding
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import org.osmdroid.bonuspack.routing.OSRMRoadManager
-import org.osmdroid.bonuspack.routing.Road
-import org.osmdroid.bonuspack.routing.RoadManager
-import androidx.core.content.res.ResourcesCompat
 import okhttp3.internal.userAgent
 import okio.IOException
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
@@ -54,6 +47,7 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import pub.devrel.easypermissions.AppSettingsDialog
 import pub.devrel.easypermissions.EasyPermissions
+import java.lang.Integer.parseInt
 import java.util.*
 import kotlin.random.Random
 
@@ -127,6 +121,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         R.array.amtStopsDesired, android.R.layout.simple_spinner_item)
         stopsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
         spinStopsDes.adapter = stopsAdapter
+        /*extraStops = parseInt(spinStopsDes.selectedItem as String)
+        Log.d(TAG, extraStops.toString())*/
 
         geonamesAccount = ManifestUtil.retrieveKey(this, "GEONAMES_ACCOUNT")
         map = binding.map
@@ -159,7 +155,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         map.overlays.add(mItineraryMarkers)
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
 
-        addWaypoints(waypoints, extraStops)
         updateUIWithItineraryMarkers()
 
         if (roads != null) updateUIWithRoads(roads!!)
@@ -216,7 +211,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             currentLocation = loc
         }
     }
-    private fun addWaypoints(waypoints: ArrayList<GeoPoint>, extraStops: Int){
+    private fun addWaypoints(extraStops: Int){
         var k = 0
         while (k<extraStops){
             val waypointID = rand(0, 1334)
@@ -316,6 +311,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                         endMarker, destinationPoint, DEST_INDEX,
                         R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
                     )
+                    addWaypoints(extraStops)
                     waypoints.add(destinationPoint!!)
                     map.controller.setCenter(destinationPoint)
                 }
@@ -419,7 +415,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
         val result = roadManager.getRoads(gpList)
         roads = result
-        Log.d(TAG, "Roads: "+ roads.toString())
         updateUIWithRoads(roads!!)
         //getPOIAsync(poiTagText.text.toString())
     }
@@ -509,7 +504,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             if (i == roadIndex) p.color = -0x7fffff01 //blue
             else p.color = -0x6f99999a //grey
         }
-        showRouteSteps()
         map.invalidate()
     }
 
@@ -541,7 +535,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             Toast.makeText(map.context, "No possible route here", Toast.LENGTH_SHORT).show()
         roadOverlay = ArrayList<Polyline>()
         for (i in roads.indices) {
-            Log.d(TAG, "Road number $i")
             val roadPolyline = RoadManager.buildRoadOverlay(roads[i])
             roadOverlay!!.add(roadPolyline)
             val routeDesc = roads[i].getLengthDurationText(this, -1)
