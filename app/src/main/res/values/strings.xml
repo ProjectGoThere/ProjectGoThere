@@ -23,6 +23,7 @@
     <string name="filter">Filter by</string>
     <string name="stopsDesired">Stops Desired</string>
     <string name="empty" />
+    <string name="open">open</string>
 
     <string-array name="propTypes">
         <item>Filter by</item>
