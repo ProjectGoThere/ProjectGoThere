@@ -158,6 +158,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mItineraryMarkers.name = getString(R.string.itinerary_markers_title)
         map.overlays.add(mItineraryMarkers)
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
+
         addWaypoints(waypoints, extraStops)
         updateUIWithItineraryMarkers()
 
@@ -190,6 +191,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
                 R.id.editDestination
             )
         } //end
+
         map.invalidate()
     }
 
@@ -220,7 +222,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             val waypointID = rand(0, 1334)
             getDataSnapshot(waypointID)
             k++
-            //Log.d(TAG, waypoints.toString())
         }
     }
 
@@ -272,7 +273,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         }
         return theAddress ?: ""
     }
-
 
     private fun geocodingTask(vararg params: Any){
         val locationAddress = params[0] as String
@@ -497,23 +497,26 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mPoiMarkers.invalidate()
 
     }
-    fun selectRoad(roadIndex: Int) {
+    private fun selectRoad(roadIndex: Int) {
         putRoadNodes(roads!![roadIndex])
         //Set route info in the text view:
-        //val textView = findViewById<View>(R.id.routeInfo) as TextView
-        //textView.text = roads[roadIndex].getLengthDurationText(this, -1)
+        if (findViewById<View>(R.id.routeInfo) != null){
+            val textView = findViewById<View>(R.id.routeInfo) as TextView
+            textView.text = roads!![roadIndex].getLengthDurationText(this, -1)
+        }
         for (i in 0 until roadOverlay!!.size) {
             val p: Paint = roadOverlay!![i].paint
             if (i == roadIndex) p.color = -0x7fffff01 //blue
             else p.color = -0x6f99999a //grey
         }
+        showRouteSteps()
         map.invalidate()
     }
 
     internal class RoadOnClickListener : Polyline.OnClickListener {
         override fun onClick(polyline: Polyline, mapView: MapView, eventPos: GeoPoint): Boolean {
             val selectedRoad = polyline.relatedObject as Int
-            //MainActivity().selectRoad(selectedRoad)
+            MainActivity().selectRoad(selectedRoad)
             polyline.infoWindowLocation = eventPos
             polyline.showInfoWindow()
             return true
