@@ -15,7 +15,7 @@
     <string name="titleResId" />
     <string name="route" />
     <string name="waypoint" />
-    <string name="step" />
+    <string name="step">Step</string>
     <string name="itinerary_markers_title">Route Waypoints</string>
     <string name="address">Address</string>
     <string name="description">Description</string>
