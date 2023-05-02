@@ -653,6 +653,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             roadNodeMarkers.add(nodeMarker)
         }
         iconIds.recycle()
+        map.overlays.add(roadNodeMarkers)
     }
     fun removePoint(index: Int) {
         if (index == START_INDEX) {
@@ -690,44 +691,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         getRoadAsync()
     }
 
-
-    private fun showRouteSteps(){
-        val nodeIcon = ContextCompat.getDrawable(this, R.drawable.marker_node)
-        for (j in 0 until roads!!.size) {
-            for (i in 0 until roads!![j].mNodes.size) {
-                val node = roads!![j].mNodes[i]
-                val nodeMarker = Marker(map)
-                nodeMarker.position = node.mLocation
-                nodeMarker.icon = nodeIcon
-                nodeMarker.title = "Step $i"
-                nodeMarker.snippet = node.mInstructions
-                nodeMarker.subDescription =
-                    Road.getLengthDurationText(this, node.mLength, node.mDuration)
-                val icon = when (node.mManeuverType) {
-                    //roundabout
-                    29 -> ContextCompat.getDrawable(this, R.drawable.ic_roundabout)
-                    //straight
-                    2 -> ContextCompat.getDrawable(this, R.drawable.ic_continue)
-                    //slight left
-                    3 -> ContextCompat.getDrawable(this, R.drawable.ic_slight_left)
-                    //left turn
-                    4 -> ContextCompat.getDrawable(this, R.drawable.ic_turn_left)
-                    //sharp left
-                    5 -> ContextCompat.getDrawable(this, R.drawable.ic_sharp_left)
-                    //exit right/slight right
-                    1, 6 -> ContextCompat.getDrawable(this, R.drawable.ic_slight_right)
-                    //right turn
-                    7 -> ContextCompat.getDrawable(this, R.drawable.ic_turn_right)
-                    //sharp right
-                    8 -> ContextCompat.getDrawable(this, R.drawable.ic_sharp_right)
-                    20 -> ContextCompat.getDrawable(this, R.drawable.ic_continue)
-                    else -> null
-                }
-                nodeMarker.image = icon
-                map.overlays.add(nodeMarker)
-            }
-        }
-    }
     private fun displayToast(s:String){
         Toast.makeText(applicationContext, "$s Permission Granted", Toast.LENGTH_SHORT).show()
     }
