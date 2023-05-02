@@ -195,6 +195,7 @@ class MainActivity : AppCompatActivity(){
                 R.id.editDestination
             )
         } //end
+
         map.invalidate()
     }
 
@@ -225,7 +226,6 @@ class MainActivity : AppCompatActivity(){
             val waypointID = rand(0, 1334)
             getDataSnapshot(waypointID)
             k++
-            //Log.d(TAG, waypoints.toString())
         }
     }
 
