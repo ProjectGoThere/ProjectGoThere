@@ -320,6 +320,7 @@ class MainActivity : AppCompatActivity(){
                         endMarker, destinationPoint, DEST_INDEX,
                         R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
                     )
+                    addWaypoints(extraStops)
                     waypoints.add(destinationPoint!!)
                     map.controller.setCenter(destinationPoint)
                 }
@@ -423,7 +424,6 @@ class MainActivity : AppCompatActivity(){
         val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
         val result = roadManager.getRoads(gpList)
         roads = result
-        Log.d(TAG, "Roads: "+ roads.toString())
         updateUIWithRoads(roads!!)
         //getPOIAsync(poiTagText.text.toString())
     }
@@ -542,7 +542,6 @@ class MainActivity : AppCompatActivity(){
             Toast.makeText(map.context, "No possible route here", Toast.LENGTH_SHORT).show()
         roadOverlay = ArrayList<Polyline>()
         for (i in roads.indices) {
-            Log.d(TAG, "Road number $i")
             val roadPolyline = RoadManager.buildRoadOverlay(roads[i])
             roadOverlay!!.add(roadPolyline)
             val routeDesc = roads[i].getLengthDurationText(this, -1)
