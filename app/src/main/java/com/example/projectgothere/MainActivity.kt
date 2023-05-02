@@ -5,20 +5,20 @@ import android.content.Context
 import android.graphics.Paint
 import android.location.Address
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import android.os.Build
 import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
-import android.preference.PreferenceManager
+import androidx.preference.PreferenceManager
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.Spinner
-import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.example.projectgothere.databinding.ActivityMainBinding
@@ -34,9 +34,8 @@ import okhttp3.internal.userAgent
 import okio.IOException
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
 import org.osmdroid.bonuspack.location.GeocoderNominatim
-import org.osmdroid.bonuspack.location.OverpassAPIProvider
-import org.osmdroid.bonuspack.location.POI
-import org.osmdroid.bonuspack.routing.*
+//import org.osmdroid.bonuspack.location.OverpassAPIProvider
+//import org.osmdroid.bonuspack.location.POI
 import org.osmdroid.bonuspack.utils.BonusPackHelper
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.util.ManifestUtil
@@ -52,17 +51,11 @@ import org.osmdroid.views.overlay.infowindow.BasicInfoWindow
 import org.osmdroid.views.overlay.infowindow.MarkerInfoWindow
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
-import pub.devrel.easypermissions.AppSettingsDialog
-import pub.devrel.easypermissions.EasyPermissions
 import java.util.*
 import kotlin.random.Random
 
 
 private const val TAG = "MainActivity"
-private const val LOCATION_CODE = 101
-private const val CAM_CODE = 102
-private const val req_code = 100
-private val permList = arrayOf(Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION)
 private const val SHARED_PREFS_APPKEY = "Project GoThere"
 private const val PREF_LOCATIONS_KEY = "PREF_LOCATIONS"
 private const val START_INDEX = -2
@@ -70,28 +63,29 @@ private const val DEST_INDEX = -1
 private const val WAYPOINT_INDEX = -3
 private var startingPoint: GeoPoint? = null
 private var destinationPoint: GeoPoint? = null
-private var currentPoint: GeoPoint? = null
-private var startMarker : Marker? = null
-private var endMarker : Marker? = null
-private var currentMarker: Marker? = null
-private lateinit var map : MapView
-private var destinationPolygon: Polygon? = null
-private var roads : Array<Road>? = null
 private lateinit var waypoints: ArrayList<GeoPoint>
-private var mItineraryMarkers = FolderOverlay()
-private var roadNodeMarkers = FolderOverlay()
-private var mPOIs: ArrayList<POI>? = null
 
 @Suppress("DEPRECATION")
-class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
+class MainActivity : AppCompatActivity(){
+
+    private var currentPoint: GeoPoint? = null
+    private var startMarker : Marker? = null
+    private var endMarker : Marker? = null
+    private var currentMarker: Marker? = null
+    private lateinit var map : MapView
+    private var destinationPolygon: Polygon? = null
+    private var roads : Array<Road>? = null
+
+    private var mItineraryMarkers = FolderOverlay()
+    private var roadNodeMarkers = FolderOverlay()
+    //private var mPOIs: ArrayList<POI>? = null
 
     private lateinit var roadManager: RoadManager
-    private lateinit var road: Road
     private var roadOverlay: ArrayList<Polyline>? = null
     private lateinit var geonamesAccount: String
     private lateinit var mViaPointInfoWindow: WaypointInfoWindow
-    private lateinit var poiTagText : AutoCompleteTextView
-    private lateinit var mPoiMarkers:RadiusMarkerClusterer
+    //private lateinit var poiTagText : AutoCompleteTextView
+    //private lateinit var mPoiMarkers:RadiusMarkerClusterer
     private lateinit var locationOverlay:MyLocationNewOverlay
 
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
@@ -102,6 +96,12 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     private var streetAddress: String? = null
     private var completeAddress: String? = null
 
+    private var isReadPermissionGranted = false
+    private var isWritePermissionGranted = false
+    private var isLocationPermissionGranted = false
+    private var isCameraPermissionGranted = false
+    private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -110,19 +110,24 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         Configuration.getInstance().userAgentValue = packageName
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){ permissions ->
+            isReadPermissionGranted = permissions[Manifest.permission.READ_EXTERNAL_STORAGE] ?: isReadPermissionGranted
+            isWritePermissionGranted = permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE] ?: isWritePermissionGranted
+            isLocationPermissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: isLocationPermissionGranted
+            isCameraPermissionGranted = permissions[Manifest.permission.CAMERA] ?: isCameraPermissionGranted
+        }
 
-
-        handlePermissions()
+        requestPermission()
         val intent = Intent(this,WelcomePageActivity::class.java)
         startActivity(intent)
 
-        val spinPropType : Spinner = findViewById(R.id.propType_dd)
+        val spinPropType : Spinner = binding.propTypeDd
         val propAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
             R.array.propTypes, android.R.layout.simple_spinner_item)
         propAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
         spinPropType.adapter = propAdapter
 
-        val spinStopsDes : Spinner = findViewById(R.id.stopsDesired_dd)
+        val spinStopsDes : Spinner = binding.stopsDesiredDd
         val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
         R.array.amtStopsDesired, android.R.layout.simple_spinner_item)
         stopsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
@@ -146,7 +151,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         waypoints = ArrayList()
         waypoints.add(startingPoint!!)
 
-        map.controller.zoomTo(9)
+        map.controller.zoomTo(9.0)
         map.controller.setCenter(startingPoint)
 
         val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map)
@@ -157,7 +162,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mItineraryMarkers.name = getString(R.string.itinerary_markers_title)
         map.overlays.add(mItineraryMarkers)
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
-        addWaypoints(waypoints, extraStops)
+        addWaypoints(extraStops)
         updateUIWithItineraryMarkers()
 
         if (roads != null) updateUIWithRoads(roads!!)
@@ -213,10 +218,10 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             currentLocation = loc
         }
     }
-    private fun addWaypoints(waypoints: ArrayList<GeoPoint>, extraStops: Int){
+    private fun addWaypoints(extraStops: Int){
         var k = 0
         while (k<extraStops){
-            val waypointID = rand(0, 1334)
+            val waypointID = rand()
             val rootRef = FirebaseDatabase.getInstance().reference
             val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
             val valueEventListener: ValueEventListener = object : ValueEventListener {
@@ -247,7 +252,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         }
     }
 
-    private fun getAddress(p: GeoPoint): String? {
+    private fun getAddress(p: GeoPoint): String {
         val geocoder = GeocoderNominatim(userAgent)
         val theAddress: String? = try {
             val dLatitude = p.latitude
@@ -270,7 +275,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         }
         return theAddress ?: ""
     }
-
 
     private fun geocodingTask(vararg params: Any){
         val locationAddress = params[0] as String
@@ -419,17 +423,17 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         //getPOIAsync(poiTagText.text.toString())
     }
 
-    private fun getPOIAsync(tag: String?) {
+    /*private fun getPOIAsync(tag: String?) {
         mPoiMarkers.items.clear()
         pOILoadingTask(tag)
-    }
-    private fun getOSMTag(humanReadableFeature: String): String? {
+    }*/
+    /*private fun getOSMTag(humanReadableFeature: String): String? {
         val map = BonusPackHelper.parseStringMapResource(
             applicationContext, R.array.osm_poi_tags
         )
         return map[humanReadableFeature.lowercase(Locale.getDefault())]
-    }
-    private fun pOILoadingTask (vararg params: String?){
+    }*/
+    /*private fun pOILoadingTask (vararg params: String?){
         var message: String? = null
         val mFeatureTag = params[0]
         val bb = map.boundingBox
@@ -469,8 +473,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
             ).show()
         }
         updateUIWithPOI(mPOIs, mFeatureTag)
-    }
-    private fun updateUIWithPOI(pois: ArrayList<POI>?, featureTag: String?) {
+    }*/
+    /*private fun updateUIWithPOI(pois: ArrayList<POI>?, featureTag: String?) {
         if (pois != null) {
             val poiInfoWindow = POIInfoWindow(map)
             for (poi in pois) {
@@ -491,8 +495,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         mPoiMarkers.name = featureTag
         mPoiMarkers.invalidate()
 
-    }
-    fun selectRoad(roadIndex: Int) {
+    }*/
+    private fun selectRoad(roadIndex: Int) {
         putRoadNodes(roads!![roadIndex])
         //Set route info in the text view:
         //val textView = findViewById<View>(R.id.routeInfo) as TextView
@@ -508,7 +512,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
     internal class RoadOnClickListener : Polyline.OnClickListener {
         override fun onClick(polyline: Polyline, mapView: MapView, eventPos: GeoPoint): Boolean {
             val selectedRoad = polyline.relatedObject as Int
-            //MainActivity().selectRoad(selectedRoad)
+            MainActivity().selectRoad(selectedRoad)
             polyline.infoWindowLocation = eventPos
             polyline.showInfoWindow()
             return true
@@ -549,7 +553,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         selectRoad(0)
     }
 
-
     private fun setViewOn(bb: BoundingBox?) {
         if (bb != null) {
             map.zoomToBoundingBox(bb, true)
@@ -559,9 +562,9 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         val mapOverlays = map.overlays
         val location = if (destinationPolygon != null) mapOverlays.indexOf(destinationPolygon) else -1
         destinationPolygon = Polygon()
-        destinationPolygon!!.setFillColor(0x15FF0080)
-        destinationPolygon!!.setStrokeColor(-0x7fffff01)
-        destinationPolygon!!.setStrokeWidth(5.0f)
+        destinationPolygon!!.fillColor = 0x15FF0080
+        destinationPolygon!!.strokeColor = -0x7fffff01
+        destinationPolygon!!.strokeWidth = 5.0f
         destinationPolygon!!.title = name
         var bb: BoundingBox? = null
         if (polygon != null) {
@@ -654,6 +657,7 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         iconIds.recycle()
         map.overlays.add(roadNodeMarkers)
     }
+
     fun removePoint(index: Int) {
         if (index == START_INDEX) {
             if (startMarker != null) {
@@ -690,41 +694,43 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         getRoadAsync()
     }
 
-    private fun displayToast(s:String){
-        Toast.makeText(applicationContext, "$s Permission Granted", Toast.LENGTH_SHORT).show()
+    private fun requestPermission(){
+        val isReadPermission = ContextCompat.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val isWritePermission = ContextCompat.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val isLocationPermission = ContextCompat.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val isCameraPermission = ContextCompat.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val minSdkLevel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+        isReadPermissionGranted = isReadPermission
+        isWritePermissionGranted = isWritePermission || minSdkLevel
+        isLocationPermissionGranted = isLocationPermission
+        isCameraPermissionGranted = isCameraPermission
+
+        val permissionRequest = mutableListOf<String>()
+        if (!isWritePermissionGranted) permissionRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (!isReadPermissionGranted) permissionRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        if (!isLocationPermission) permissionRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (!isCameraPermission) permissionRequest.add(Manifest.permission.CAMERA)
+
+        if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())
     }
-    private fun handlePermissions(){
-        if (EasyPermissions.hasPermissions(applicationContext, *permList)) {
-            Toast.makeText(applicationContext, "Permissions Granted", Toast.LENGTH_SHORT).show()
-        } else {
-            EasyPermissions.requestPermissions(
-                this@MainActivity, R.string.rat.toString(),
-                req_code, *permList
-            )
-        }
-    }
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        EasyPermissions.onRequestPermissionsResult(requestCode,permissions,grantResults,this@MainActivity)
-    }
-    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
-        when (requestCode){
-            101 -> displayToast("Location")
-            102 -> displayToast("Camera")
-            100 -> displayToast("All")
-        }
-    }
-    override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
-        if (EasyPermissions.somePermissionPermanentlyDenied(this@MainActivity, perms)) {
-            AppSettingsDialog.Builder(this@MainActivity).build().show()
-        } else {
-            Toast.makeText(applicationContext, "Permission Denied", Toast.LENGTH_SHORT).show()
-        }
-    }
+
     override fun onResume() {
         super.onResume()
         map.onResume()
