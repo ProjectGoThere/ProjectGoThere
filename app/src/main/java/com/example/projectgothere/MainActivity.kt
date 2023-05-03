@@ -8,9 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
-import android.os.Build
-import android.os.Bundle
-import android.os.StrictMode
+import android.os.*
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
 import androidx.preference.PreferenceManager
@@ -30,6 +28,8 @@ import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
 import androidx.core.content.res.ResourcesCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.*
 import okhttp3.internal.userAgent
 import okio.IOException
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
@@ -117,25 +117,14 @@ class MainActivity : AppCompatActivity(){
             isCameraPermissionGranted = permissions[Manifest.permission.CAMERA] ?: isCameraPermissionGranted
         }
 
+        map = binding.map
+        map.setMultiTouchControls(true)
         requestPermission()
+        getLocation()
         val intent = Intent(this,WelcomePageActivity::class.java)
         startActivity(intent)
 
-        val spinPropType : Spinner = binding.propTypeDd
-        val propAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
-            R.array.propTypes, android.R.layout.simple_spinner_item)
-        propAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
-        spinPropType.adapter = propAdapter
-
-        val spinStopsDes : Spinner = binding.stopsDesiredDd
-        val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
-        R.array.amtStopsDesired, android.R.layout.simple_spinner_item)
-        stopsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
-        spinStopsDes.adapter = stopsAdapter
-
         geonamesAccount = ManifestUtil.retrieveKey(this, "GEONAMES_ACCOUNT")
-        map = binding.map
-        map.setMultiTouchControls(true)
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
         getLocation()
@@ -151,12 +140,12 @@ class MainActivity : AppCompatActivity(){
         waypoints = ArrayList()
         waypoints.add(startingPoint!!)
 
-        map.controller.zoomTo(9.0)
-        map.controller.setCenter(startingPoint)
-
         val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(applicationContext), map)
         locationOverlay.enableMyLocation()
         map.overlays.add(locationOverlay)
+
+        map.controller.zoomTo(9.0)
+        map.controller.setCenter(startingPoint)
 
         mItineraryMarkers = FolderOverlay()
         mItineraryMarkers.name = getString(R.string.itinerary_markers_title)
@@ -176,6 +165,23 @@ class MainActivity : AppCompatActivity(){
         mPoiMarkers.textPaint.textSize = 12 * resources.displayMetrics.density
         map.overlays.add(mPoiMarkers)
 
+        val spinPropType : Spinner = binding.propTypeDd
+        val propAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
+            R.array.propTypes, android.R.layout.simple_spinner_item)
+        propAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
+        spinPropType.adapter = propAdapter
+
+        val spinStopsDes : Spinner = binding.stopsDesiredDd
+        val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
+            R.array.amtStopsDesired, android.R.layout.simple_spinner_item)
+        stopsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
+        spinStopsDes.adapter = stopsAdapter
+
+        binding.cameraButton.setOnClickListener{
+            Toast.makeText(applicationContext, "Camera Button is Clickable", Toast.LENGTH_SHORT).show()
+            //val cameraIntent = Intent(this, CameraActivity::class.java)
+            //startActivity(cameraIntent)
+        }
         //start
         binding.editDeparture.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
 
@@ -204,19 +210,29 @@ class MainActivity : AppCompatActivity(){
 
     private fun getLocation() {
         var location: Location? = null
-        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
-        try {
-            location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-        } catch (e: SecurityException) {
-            Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT).show()
-        }
-        if (location != null) {
-            val loc = GeoPoint(
-                (location.latitude),
-                (location.longitude)
-            )
-            currentLocation = loc
-        }
+        lifecycleScope.executeAsyncTask(
+            onPreExecute = {},
+            doInBackground = {
+                val lm = getSystemService(LOCATION_SERVICE) as LocationManager
+                try {
+                    location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                } catch (e: SecurityException) {
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                } // send data to "onPostExecute"
+            },
+            onPostExecute = {
+                if (location != null) {
+                    val loc = GeoPoint(
+                        (location!!.latitude),
+                        (location!!.longitude)
+                    )
+                    currentLocation = loc
+                }
+            }
+        )
     }
     private fun addWaypoints(extraStops: Int){
         var k = 0
@@ -277,70 +293,84 @@ class MainActivity : AppCompatActivity(){
     }
 
     private fun geocodingTask(vararg params: Any){
-        val locationAddress = params[0] as String
-        val index = params[1] as Int
-        val geocoder = GeocoderNominatim(userAgent)
-        geocoder.setOptions(true) //ask for enclosing polygon (if any)
-        val foundAddresses =
-            try {
-                val viewbox = map.boundingBox
-                geocoder.getFromLocationName(
-                    locationAddress, 3,
-                    viewbox.latSouth, viewbox.lonEast,
-                    viewbox.latNorth, viewbox.lonWest, false
-                )
-            } catch (e: Exception) {
-                null
-            }
-        if (foundAddresses == null) {
-            Toast.makeText(applicationContext, "Geocoding error", Toast.LENGTH_SHORT).show()
-        } else if (foundAddresses.size == 0) { //if no address found, display an error
-            Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT).show()
-        } else {
-            val address: Address = foundAddresses[0] //get first address
-            val addressDisplayName: String? = address.extras.getString("display_name")
-            when (index) {
-                START_INDEX -> {
-                    startingPoint = GeoPoint(address.latitude, address.longitude)
-                    startMarker = updateItineraryMarker(
-                        startMarker, startingPoint, START_INDEX,
-                        R.string.departure, R.drawable.marker_departure, -1, addressDisplayName
+        var index = 0
+        lifecycleScope.executeAsyncTask(
+            onPreExecute = {},
+            doInBackground = {
+                val locationAddress = params[0] as String
+                index = params[1] as Int
+                val geocoder = GeocoderNominatim(userAgent)
+                geocoder.setOptions(true) //ask for enclosing polygon (if any)
+                try{
+                    val viewbox = map.boundingBox
+                    geocoder.getFromLocationName(
+                        locationAddress, 3,
+                        viewbox.latSouth, viewbox.lonEast,
+                        viewbox.latNorth, viewbox.lonWest, false
                     )
-                    waypoints[0] = startingPoint!!
-                    map.controller.setCenter(startingPoint)
-                }
-                DEST_INDEX -> {
-                    destinationPoint = GeoPoint(address.latitude, address.longitude)
-                    endMarker = updateItineraryMarker(
-                        endMarker, destinationPoint, DEST_INDEX,
-                        R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
-                    )
-                    waypoints.add(destinationPoint!!)
-                    map.controller.setCenter(destinationPoint)
-                }
-                WAYPOINT_INDEX -> {
-                    currentPoint = GeoPoint(address.latitude, address.longitude)
-                    currentMarker = updateItineraryMarker(
-                        null, currentPoint, index,
-                        R.string.waypoint, R.drawable.waypoint_marker, -1, addressDisplayName
-                    )
-                    if (destinationPoint != null) waypoints.add(waypoints.size-2, currentPoint!!)
-                    else waypoints.add(currentPoint!!)
-                    map.controller.setCenter(currentPoint!!)
+                } catch (e: Exception){
+                    null
+                } // send data to "onPostExecute"
+            },
+            onPostExecute = {
+                // ... here "it" is a data returned from "doInBackground"
+                if (it == null){
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(applicationContext, "Geocoding error", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                } else if (it.size == 0){
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                } else {
+                    val address: Address = it[0] //get first address
+                    val addressDisplayName: String? = address.extras.getString("display_name")
+                    when (index) {
+                        START_INDEX -> {
+                            startingPoint = GeoPoint(address.latitude, address.longitude)
+                            startMarker = updateItineraryMarker(
+                                startMarker, startingPoint, START_INDEX,
+                                R.string.departure, R.drawable.marker_departure, -1, addressDisplayName
+                            )
+                            waypoints[0] = startingPoint!!
+                            map.controller.setCenter(startingPoint)
+                        }
+                        DEST_INDEX -> {
+                            destinationPoint = GeoPoint(address.latitude, address.longitude)
+                            endMarker = updateItineraryMarker(
+                                endMarker, destinationPoint, DEST_INDEX,
+                                R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
+                            )
+                            waypoints.add(destinationPoint!!)
+                            map.controller.setCenter(destinationPoint)
+                        }
+                        WAYPOINT_INDEX -> {
+                            currentPoint = GeoPoint(address.latitude, address.longitude)
+                            currentMarker = updateItineraryMarker(
+                                null, currentPoint, index,
+                                R.string.waypoint, R.drawable.waypoint_marker, -1, addressDisplayName
+                            )
+                            if (destinationPoint != null) waypoints.add(waypoints.size-2, currentPoint!!)
+                            else waypoints.add(currentPoint!!)
+                            map.controller.setCenter(currentPoint!!)
+                        }
+                    }
+                    Log.d(TAG,"Waypoints: $waypoints")
+                    getRoadAsync()
+                    //get and display enclosing polygon:
+                    if (address.extras.containsKey("polygonpoints")) {
+                        val polygon: ArrayList<GeoPoint?>? =
+                            address.extras.getParcelableArrayList("polygonpoints")
+                        //Log.d("DEBUG", "polygon:"+polygon.size());
+                        updateUIWithPolygon(polygon, addressDisplayName)
+                    } else {
+                        updateUIWithPolygon(null, "")
+                    }
                 }
             }
-            Log.d(TAG,"Waypoints: $waypoints")
-            getRoadAsync()
-            //get and display enclosing polygon:
-            if (address.extras.containsKey("polygonpoints")) {
-                val polygon: ArrayList<GeoPoint?>? =
-                    address.extras.getParcelableArrayList("polygonpoints")
-                //Log.d("DEBUG", "polygon:"+polygon.size());
-                updateUIWithPolygon(polygon, addressDisplayName)
-            } else {
-                updateUIWithPolygon(null, "")
-            }
-        }
+        )
     }
 
     private val mItineraryListener: OnItineraryMarkerDragListener = OnItineraryMarkerDragListener()
@@ -413,14 +443,22 @@ class MainActivity : AppCompatActivity(){
         geocodingTask(locationAddress, index)
     }//endHandleSearchButton
     private fun updateRoadTask(vararg params: ArrayList<GeoPoint>){
-        val gpList = params[0]
-        Log.d(TAG, "gpList: $gpList")
-        val roadManager = OSRMRoadManager(this@MainActivity, "MY_USER_AGENT")
-        val result = roadManager.getRoads(gpList)
-        roads = result
-        Log.d(TAG, "Roads: "+ roads.toString())
-        updateUIWithRoads(roads!!)
-        //getPOIAsync(poiTagText.text.toString())
+        lifecycleScope.executeAsyncTask(
+            onPreExecute = {},
+            doInBackground = {
+                val gpList = params[0]
+                Log.d(TAG, "gpList: $gpList")
+                val roadManager = OSRMRoadManager(applicationContext, "MY_USER_AGENT")
+                roadManager.getRoads(gpList)// send data to "onPostExecute"
+            },
+            onPostExecute = {
+                // ... here "it" is a data returned from "doInBackground"
+                roads = it
+                Log.d(TAG, "Roads: "+ roads.toString())
+                updateUIWithRoads(roads!!)
+                //getPOIAsync(poiTagText.text.toString())
+            }
+        )
     }
 
     /*private fun getPOIAsync(tag: String?) {
@@ -581,10 +619,21 @@ class MainActivity : AppCompatActivity(){
 
     //Async task to reverse-geocode the marker position in a separate thread:
     private fun reverseGeocodingTask(vararg params: Marker?) {
-        val marker = params[0]
-        val result = getAddress(marker!!.position)
-        marker.snippet = result
-        marker.showInfoWindow()
+        var marker:Marker? = null
+        lifecycleScope.executeAsyncTask(
+            onPreExecute = {},
+            doInBackground = {
+                marker = params[0]
+                getAddress(marker!!.position) // send data to "onPostExecute"
+            },
+            onPostExecute = {
+                // ... here "it" is a data returned from "doInBackground"
+                if (marker != null) {
+                    marker!!.snippet = it
+                    marker!!.showInfoWindow()
+                }
+            }
+        )
     }
 
     internal class OnItineraryMarkerDragListener : OnMarkerDragListener {
@@ -695,40 +744,58 @@ class MainActivity : AppCompatActivity(){
     }
 
     private fun requestPermission(){
-        val isReadPermission = ContextCompat.checkSelfPermission(
-            applicationContext,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        ) == PackageManager.PERMISSION_GRANTED
+        lifecycleScope.executeAsyncTask(
+            onPreExecute = {},
+            doInBackground = {
+                val isReadPermission = ContextCompat.checkSelfPermission(
+                    applicationContext,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED
 
-        val isWritePermission = ContextCompat.checkSelfPermission(
-            applicationContext,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        ) == PackageManager.PERMISSION_GRANTED
+                val isWritePermission = ContextCompat.checkSelfPermission(
+                    applicationContext,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) == PackageManager.PERMISSION_GRANTED
 
-        val isLocationPermission = ContextCompat.checkSelfPermission(
-            applicationContext,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
+                val isLocationPermission = ContextCompat.checkSelfPermission(
+                    applicationContext,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
 
-        val isCameraPermission = ContextCompat.checkSelfPermission(
-            applicationContext,
-            Manifest.permission.CAMERA
-        ) == PackageManager.PERMISSION_GRANTED
+                val isCameraPermission = ContextCompat.checkSelfPermission(
+                    applicationContext,
+                    Manifest.permission.CAMERA
+                ) == PackageManager.PERMISSION_GRANTED
 
-        val minSdkLevel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                val minSdkLevel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
-        isReadPermissionGranted = isReadPermission
-        isWritePermissionGranted = isWritePermission || minSdkLevel
-        isLocationPermissionGranted = isLocationPermission
-        isCameraPermissionGranted = isCameraPermission
+                isReadPermissionGranted = isReadPermission
+                isWritePermissionGranted = isWritePermission || minSdkLevel
+                isLocationPermissionGranted = isLocationPermission
+                isCameraPermissionGranted = isCameraPermission
 
-        val permissionRequest = mutableListOf<String>()
-        if (!isWritePermissionGranted) permissionRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        if (!isReadPermissionGranted) permissionRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-        if (!isLocationPermission) permissionRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        if (!isCameraPermission) permissionRequest.add(Manifest.permission.CAMERA)
+                val permissionRequest = mutableListOf<String>()
+                if (!isWritePermissionGranted) permissionRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                if (!isReadPermissionGranted) permissionRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                if (!isLocationPermission) permissionRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+                if (!isCameraPermission) permissionRequest.add(Manifest.permission.CAMERA)
 
-        if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())
+                if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())// send data to "onPostExecute"
+            },
+            onPostExecute = {}
+        )
+    }
+
+    private fun <R> CoroutineScope.executeAsyncTask(
+        onPreExecute: () -> Unit,
+        doInBackground: () -> R,
+        onPostExecute: (R) -> Unit
+    ) = launch {
+        onPreExecute()
+        val result = withContext(Dispatchers.IO) { // runs in background thread without blocking the Main Thread
+            doInBackground()
+        }
+        onPostExecute(result)
     }
 
     override fun onResume() {
