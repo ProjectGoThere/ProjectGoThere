@@ -1,11 +1,13 @@
 package com.example.projectgothere
 
+//import org.osmdroid.bonuspack.location.OverpassAPIProvider
+//import org.osmdroid.bonuspack.location.POI
 import android.Manifest
 import android.content.Context
-import android.graphics.Paint
-import android.location.Address
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Paint
+import android.location.Address
 import android.location.Location
 import android.location.LocationManager
 import android.os.Build
@@ -13,7 +15,6 @@ import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
-import androidx.preference.PreferenceManager
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
@@ -21,21 +22,20 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.preference.PreferenceManager
 import com.example.projectgothere.databinding.ActivityMainBinding
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import org.osmdroid.bonuspack.routing.OSRMRoadManager
-import org.osmdroid.bonuspack.routing.Road
-import org.osmdroid.bonuspack.routing.RoadManager
-import androidx.core.content.res.ResourcesCompat
 import okhttp3.internal.userAgent
 import okio.IOException
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
 import org.osmdroid.bonuspack.location.GeocoderNominatim
-//import org.osmdroid.bonuspack.location.OverpassAPIProvider
-//import org.osmdroid.bonuspack.location.POI
+import org.osmdroid.bonuspack.routing.OSRMRoadManager
+import org.osmdroid.bonuspack.routing.Road
+import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.bonuspack.utils.BonusPackHelper
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.util.ManifestUtil
@@ -51,6 +51,7 @@ import org.osmdroid.views.overlay.infowindow.BasicInfoWindow
 import org.osmdroid.views.overlay.infowindow.MarkerInfoWindow
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import java.lang.Integer.parseInt
 import java.util.*
 import kotlin.random.Random
 
@@ -126,12 +127,14 @@ class MainActivity : AppCompatActivity(){
             R.array.propTypes, android.R.layout.simple_spinner_item)
         propAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
         spinPropType.adapter = propAdapter
+        getSpinnerVal(spinPropType)
 
         val spinStopsDes : Spinner = binding.stopsDesiredDd
         val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
         R.array.amtStopsDesired, android.R.layout.simple_spinner_item)
         stopsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
         spinStopsDes.adapter = stopsAdapter
+        getSpinnerVal(spinStopsDes)
 
         geonamesAccount = ManifestUtil.retrieveKey(this, "GEONAMES_ACCOUNT")
         map = binding.map
@@ -163,7 +166,6 @@ class MainActivity : AppCompatActivity(){
         mItineraryMarkers.name = getString(R.string.itinerary_markers_title)
         map.overlays.add(mItineraryMarkers)
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
-        addWaypoints(extraStops)
         updateUIWithItineraryMarkers()
 
         if (roads != null) updateUIWithRoads(roads!!)
@@ -197,6 +199,26 @@ class MainActivity : AppCompatActivity(){
         } //end
 
         map.invalidate()
+    }
+
+    private fun getSpinnerVal(spinner: Spinner){
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View,
+                pos: Int,
+                id: Long
+            ) {
+                val item = parent.getItemAtPosition(pos)
+                Log.d(TAG, item.toString()) //prints the text in spinner item.
+                val selectedStops = item.toString()
+                if (selectedStops.toIntOrNull() != null){
+                    extraStops = parseInt(selectedStops)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
     }
 
     private fun rand(start: Int = 0, end: Int = 1334): Int {
