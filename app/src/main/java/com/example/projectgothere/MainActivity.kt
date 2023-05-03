@@ -1,7 +1,5 @@
 package com.example.projectgothere
 
-//import org.osmdroid.bonuspack.location.OverpassAPIProvider
-//import org.osmdroid.bonuspack.location.POI
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -14,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy
+import android.preference.PreferenceManager
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -166,6 +165,7 @@ class MainActivity : AppCompatActivity(){
         mItineraryMarkers.name = getString(R.string.itinerary_markers_title)
         map.overlays.add(mItineraryMarkers)
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
+
         updateUIWithItineraryMarkers()
 
         if (roads != null) updateUIWithRoads(roads!!)
