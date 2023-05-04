@@ -136,8 +136,8 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         getLocation()
 
         binding.cameraButton.setOnClickListener{
-            //val cameraIntent = Intent(this, CameraActivity::class.java)
-            //startActivity(cameraIntent)
+            val cameraIntent = Intent(this, CameraActivity::class.java)
+            startActivity(cameraIntent)
         }
 
         startingPoint = currentLocation
