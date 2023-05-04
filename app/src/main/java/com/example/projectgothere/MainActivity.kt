@@ -322,8 +322,6 @@ class MainActivity : AppCompatActivity(){
                         viewbox.latSouth, viewbox.lonEast,
                         viewbox.latNorth, viewbox.lonWest, false
                     )
-            onPostExecute = {
-                if (it == null) {
                 } catch (e: Exception){
                     null
                 } // send data to "onPostExecute"
