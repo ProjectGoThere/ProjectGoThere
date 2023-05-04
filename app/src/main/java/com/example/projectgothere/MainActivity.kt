@@ -127,13 +127,6 @@ class MainActivity : AppCompatActivity(){
         geonamesAccount = ManifestUtil.retrieveKey(this, "GEONAMES_ACCOUNT")
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
-        getLocation()
-
-        binding.cameraButton.setOnClickListener{
-            val cameraIntent = Intent(this, CameraActivity::class.java)
-            startActivity(cameraIntent)
-        }
-
         startingPoint = currentLocation
             //GeoPoint(46.7867, -92.1005)
 
@@ -178,9 +171,8 @@ class MainActivity : AppCompatActivity(){
         spinStopsDes.adapter = stopsAdapter
 
         binding.cameraButton.setOnClickListener{
-            Toast.makeText(applicationContext, "Camera Button is Clickable", Toast.LENGTH_SHORT).show()
-            //val cameraIntent = Intent(this, CameraActivity::class.java)
-            //startActivity(cameraIntent)
+            val cameraIntent = Intent(this, CameraActivity::class.java)
+            startActivity(cameraIntent)
         }
         //start
         binding.editDeparture.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
