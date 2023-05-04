@@ -171,9 +171,8 @@ class MainActivity : AppCompatActivity(){
         spinStopsDes.adapter = stopsAdapter
 
         binding.cameraButton.setOnClickListener{
-            Toast.makeText(applicationContext, "Camera Button is Clickable", Toast.LENGTH_SHORT).show()
-            //val cameraIntent = Intent(this, CameraActivity::class.java)
-            //startActivity(cameraIntent)
+            val cameraIntent = Intent(this, CameraActivity::class.java)
+            startActivity(cameraIntent)
         }
         //start
         binding.editDeparture.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
