@@ -136,7 +136,6 @@ class MainActivity : AppCompatActivity(), EasyPermissions.PermissionCallbacks{
         getLocation()
 
         binding.cameraButton.setOnClickListener{
-            Toast.makeText(applicationContext, "Camera Button is Clickable", Toast.LENGTH_SHORT).show()
             //val cameraIntent = Intent(this, CameraActivity::class.java)
             //startActivity(cameraIntent)
         }
