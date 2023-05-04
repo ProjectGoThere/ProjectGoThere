@@ -34,8 +34,6 @@ import okhttp3.internal.userAgent
 import okio.IOException
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
 import org.osmdroid.bonuspack.location.GeocoderNominatim
-//import org.osmdroid.bonuspack.location.OverpassAPIProvider
-//import org.osmdroid.bonuspack.location.POI
 import org.osmdroid.bonuspack.utils.BonusPackHelper
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.util.ManifestUtil
@@ -51,6 +49,7 @@ import org.osmdroid.views.overlay.infowindow.BasicInfoWindow
 import org.osmdroid.views.overlay.infowindow.MarkerInfoWindow
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import java.lang.Integer.parseInt
 import java.util.*
 import kotlin.random.Random
 
@@ -128,7 +127,7 @@ class MainActivity : AppCompatActivity(){
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
         startingPoint = currentLocation
-            //GeoPoint(46.7867, -92.1005)
+        //GeoPoint(46.7867, -92.1005)
 
         waypoints = ArrayList()
         waypoints.add(startingPoint!!)
@@ -144,7 +143,6 @@ class MainActivity : AppCompatActivity(){
         mItineraryMarkers.name = getString(R.string.itinerary_markers_title)
         map.overlays.add(mItineraryMarkers)
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
-        addWaypoints(extraStops)
         updateUIWithItineraryMarkers()
 
         if (roads != null) updateUIWithRoads(roads!!)
@@ -163,12 +161,15 @@ class MainActivity : AppCompatActivity(){
             R.array.propTypes, android.R.layout.simple_spinner_item)
         propAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
         spinPropType.adapter = propAdapter
+        getSpinnerVal(spinPropType)
 
         val spinStopsDes : Spinner = binding.stopsDesiredDd
         val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
             R.array.amtStopsDesired, android.R.layout.simple_spinner_item)
         stopsAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
         spinStopsDes.adapter = stopsAdapter
+        getSpinnerVal(spinStopsDes)
+
 
         binding.cameraButton.setOnClickListener{
             val cameraIntent = Intent(this, CameraActivity::class.java)
@@ -192,7 +193,28 @@ class MainActivity : AppCompatActivity(){
                 R.id.editDestination
             )
         } //end
+
         map.invalidate()
+    }
+
+    private fun getSpinnerVal(spinner: Spinner){
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View,
+                pos: Int,
+                id: Long
+            ) {
+                val item = parent.getItemAtPosition(pos)
+                Log.d(TAG, item.toString()) //prints the text in spinner item.
+                val selectedStops = item.toString()
+                if (selectedStops.toIntOrNull() != null){
+                    extraStops = parseInt(selectedStops)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
     }
 
     private fun rand(start: Int = 0, end: Int = 1334): Int {
@@ -229,35 +251,35 @@ class MainActivity : AppCompatActivity(){
     private fun addWaypoints(extraStops: Int){
         var k = 0
         while (k<extraStops){
-            val waypointID = rand()
-            val rootRef = FirebaseDatabase.getInstance().reference
-            val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
-            val valueEventListener: ValueEventListener = object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    var switch = 0
-                    for (ds in dataSnapshot.children) {
-                        when (switch){
-                            0 -> cityAddress = ds.getValue(String::class.java)
-                            1 -> countyAddress = ds.getValue(String::class.java)
-                            2 -> streetAddress = ds.getValue(String::class.java)
-                        }
-                        switch++
+            val waypointID = rand(0, 1334)
+            getDataSnapshot(waypointID)
+            k++
+        }
+    }
+
+    private fun getDataSnapshot(waypointID: Int){
+        val rootRef = FirebaseDatabase.getInstance().reference
+        val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
+        val valueEventListener: ValueEventListener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                for ((switch, ds) in dataSnapshot.children.withIndex()) {
+                    when (switch){
+                        0 -> cityAddress = ds.getValue(String::class.java)
+                        1 -> countyAddress = ds.getValue(String::class.java)
+                        2 -> streetAddress = ds.getValue(String::class.java)
                     }
-                    completeAddress = "$streetAddress $cityAddress MN"
-                    Log.d(TAG, completeAddress!!)
-                    geocodingTask(completeAddress!!, WAYPOINT_INDEX)
-
                 }
+                completeAddress = "$streetAddress $cityAddress MN"
+                Log.d(TAG, completeAddress!!)
+                geocodingTask(completeAddress!!, WAYPOINT_INDEX)
 
-                override fun onCancelled(databaseError: DatabaseError) {
-                    Log.d(TAG, databaseError.message)
-                }
             }
 
-            addressRef.addListenerForSingleValueEvent(valueEventListener)
-            k++
-            //Log.d(TAG, waypoints.toString())
+            override fun onCancelled(databaseError: DatabaseError) {
+                Log.d(TAG, databaseError.message)
+            }
         }
+        addressRef.addListenerForSingleValueEvent(valueEventListener)
     }
 
     private fun getAddress(p: GeoPoint): String {
@@ -300,6 +322,8 @@ class MainActivity : AppCompatActivity(){
                         viewbox.latSouth, viewbox.lonEast,
                         viewbox.latNorth, viewbox.lonWest, false
                     )
+            onPostExecute = {
+                if (it == null) {
                 } catch (e: Exception){
                     null
                 } // send data to "onPostExecute"
@@ -335,6 +359,7 @@ class MainActivity : AppCompatActivity(){
                                 endMarker, destinationPoint, DEST_INDEX,
                                 R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
                             )
+                            addWaypoints(extraStops)
                             waypoints.add(destinationPoint!!)
                             map.controller.setCenter(destinationPoint)
                         }
@@ -441,10 +466,9 @@ class MainActivity : AppCompatActivity(){
                 val gpList = params[0]
                 Log.d(TAG, "gpList: $gpList")
                 val roadManager = OSRMRoadManager(applicationContext, "MY_USER_AGENT")
-                roadManager.getRoads(gpList)// send data to "onPostExecute"
+                roadManager.getRoads(gpList)
             },
             onPostExecute = {
-                // ... here "it" is a data returned from "doInBackground"
                 roads = it
                 Log.d(TAG, "Roads: "+ roads.toString())
                 updateUIWithRoads(roads!!)
@@ -567,7 +591,6 @@ class MainActivity : AppCompatActivity(){
             Toast.makeText(map.context, "No possible route here", Toast.LENGTH_SHORT).show()
         roadOverlay = ArrayList<Polyline>()
         for (i in roads.indices) {
-            Log.d(TAG, "Road number $i")
             val roadPolyline = RoadManager.buildRoadOverlay(roads[i])
             roadOverlay!!.add(roadPolyline)
             val routeDesc = roads[i].getLengthDurationText(this, -1)
@@ -616,11 +639,11 @@ class MainActivity : AppCompatActivity(){
             onPreExecute = {},
             doInBackground = {
                 marker = params[0]
-                getAddress(marker!!.position) // send data to "onPostExecute"
+                getAddress(marker!!.position)
             },
             onPostExecute = {
-                // ... here "it" is a data returned from "doInBackground"
-                if (marker != null) {
+                //...here "it" is a data returned from "doInBackground"
+                if (marker != null){
                     marker!!.snippet = it
                     marker!!.showInfoWindow()
                 }
@@ -777,7 +800,7 @@ class MainActivity : AppCompatActivity(){
             onPostExecute = {}
         )
     }
-
+    
     private fun <R> CoroutineScope.executeAsyncTask(
         onPreExecute: () -> Unit,
         doInBackground: () -> R,
