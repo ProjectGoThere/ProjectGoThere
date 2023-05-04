@@ -170,6 +170,7 @@ class MainActivity : AppCompatActivity(){
         spinStopsDes.adapter = stopsAdapter
         getSpinnerVal(spinStopsDes)
 
+
         binding.cameraButton.setOnClickListener{
             Toast.makeText(applicationContext, "Camera Button is Clickable", Toast.LENGTH_SHORT).show()
             //val cameraIntent = Intent(this, CameraActivity::class.java)
@@ -224,19 +225,29 @@ class MainActivity : AppCompatActivity(){
 
     private fun getLocation() {
         var location: Location? = null
-        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
-        try {
-            location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-        } catch (e: SecurityException) {
-            Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT).show()
-        }
-        if (location != null) {
-            val loc = GeoPoint(
-                (location.latitude),
-                (location.longitude)
-            )
-            currentLocation = loc
-        }
+        lifecycleScope.executeAsyncTask(
+            onPreExecute = {},
+            doInBackground = {
+                val lm = getSystemService(LOCATION_SERVICE) as LocationManager
+                try {
+                    location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                } catch (e: SecurityException) {
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT)
+                            .show()
+                    }
+                } // send data to "onPostExecute"
+            },
+            onPostExecute = {
+                if (location != null) {
+                    val loc = GeoPoint(
+                        (location!!.latitude),
+                        (location!!.longitude)
+                    )
+                    currentLocation = loc
+                }
+            }
+        )
     }
     private fun addWaypoints(extraStops: Int){
         var k = 0
@@ -305,30 +316,30 @@ class MainActivity : AppCompatActivity(){
                 index = params[1] as Int
                 val geocoder = GeocoderNominatim(userAgent)
                 geocoder.setOptions(true) //ask for enclosing polygon (if any)
-                try {
+                try{
                     val viewbox = map.boundingBox
                     geocoder.getFromLocationName(
                         locationAddress, 3,
                         viewbox.latSouth, viewbox.lonEast,
                         viewbox.latNorth, viewbox.lonWest, false
                     )
-                } catch (e: Exception) {
-                    null
-                }
-            },
             onPostExecute = {
                 if (it == null) {
+                } catch (e: Exception){
+                    null
+                } // send data to "onPostExecute"
+            },
+            onPostExecute = {
+                // ... here "it" is a data returned from "doInBackground"
+                if (it == null){
                     Handler(Looper.getMainLooper()).post {
                         Toast.makeText(applicationContext, "Geocoding error", Toast.LENGTH_SHORT)
                             .show()
                     }
-                }
-                else if (it.size == 0){
+                } else if (it.size == 0){
                     Handler(Looper.getMainLooper()).post {
-                        //Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT).show()
-                        Log.d(TAG, "Else if called")
-                        val newWaypointID = rand(0, 1334)
-                        getDataSnapshot(newWaypointID)
+                        Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT)
+                            .show()
                     }
                 } else {
                     val address: Address = it[0] //get first address
@@ -460,6 +471,7 @@ class MainActivity : AppCompatActivity(){
             },
             onPostExecute = {
                 roads = it
+                Log.d(TAG, "Roads: "+ roads.toString())
                 updateUIWithRoads(roads!!)
                 //getPOIAsync(poiTagText.text.toString())
             }
@@ -784,11 +796,12 @@ class MainActivity : AppCompatActivity(){
                 if (!isLocationPermission) permissionRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
                 if (!isCameraPermission) permissionRequest.add(Manifest.permission.CAMERA)
 
-                if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())
+                if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())// send data to "onPostExecute"
             },
             onPostExecute = {}
         )
     }
+    
     private fun <R> CoroutineScope.executeAsyncTask(
         onPreExecute: () -> Unit,
         doInBackground: () -> R,
