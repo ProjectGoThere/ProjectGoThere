@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Paint
-import android.graphics.drawable.ColorDrawable
 import android.location.Address
 import android.location.Location
 import android.location.LocationManager
@@ -179,7 +178,7 @@ class MainActivity : AppCompatActivity(){
 
 
         binding.cameraButton.setOnClickListener{
-            showDialoge()
+            showDialog()
         }
         //start
         binding.editDeparture.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
@@ -203,9 +202,10 @@ class MainActivity : AppCompatActivity(){
         map.invalidate()
     }
 
-    private fun showDialoge() {
-        val dialog: Dialog = Dialog(this)
+    private fun showDialog() {
+        val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.bottomsheetlayout)
 
         val currentTripLayout : LinearLayout = dialog.findViewById(R.id.layoutCurrentTrip)
         val prevTripLayout : LinearLayout = dialog.findViewById(R.id.layoutPreviousTrip)
@@ -229,7 +229,7 @@ class MainActivity : AppCompatActivity(){
         }
 
         dialog.show()
-        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT)
         dialog.window?.setBackgroundDrawableResource(R.color.transparent)
         dialog.window?.attributes?.windowAnimations ?: (R.style.DialogAnimation)
         dialog.window?.setGravity(Gravity.BOTTOM)
