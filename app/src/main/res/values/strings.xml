@@ -27,6 +27,8 @@
     <string name="take_photo">Take photo</string>
     <string name="start_capture">Start Capture</string>
     <string name="stop_capture">Stop Capture</string>
+    <string name="see_current_trip">Current Trip</string>
+    <string name="see_previous_trip">Previous Trip</string>
 
     <string-array name="propTypes">
         <item>Filter by</item>
