@@ -228,10 +228,9 @@ class MainActivity : AppCompatActivity(){
         }
 
         takePictureLayout.setOnClickListener {
-            //val cameraIntent = Intent(this, CameraActivity::class.java)
-            //startActivity(cameraIntent)
             dialog.dismiss()
-            Toast.makeText(this@MainActivity, "Take a picture", Toast.LENGTH_SHORT).show()
+            val cameraIntent = Intent(this, CameraActivity::class.java)
+            startActivity(cameraIntent)
         }
 
         dialog.show()
