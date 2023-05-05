@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Paint
+import android.graphics.drawable.ColorDrawable
 import android.location.Address
 import android.location.Location
 import android.location.LocationManager
