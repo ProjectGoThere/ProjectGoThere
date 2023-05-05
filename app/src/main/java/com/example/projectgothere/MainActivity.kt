@@ -1,17 +1,22 @@
 package com.example.projectgothere
 
 import android.Manifest
+import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Paint
+import android.graphics.drawable.ColorDrawable
 import android.location.Address
 import android.location.Location
 import android.location.LocationManager
 import android.os.*
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
+import android.view.Window
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.activity.result.ActivityResultLauncher
@@ -32,11 +37,11 @@ import okio.IOException
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
 import org.osmdroid.bonuspack.location.GeoNamesPOIProvider
 import org.osmdroid.bonuspack.location.GeocoderNominatim
-import org.osmdroid.bonuspack.location.OverpassAPIProvider
-import org.osmdroid.bonuspack.location.POI
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
+import org.osmdroid.bonuspack.location.OverpassAPIProvider
+import org.osmdroid.bonuspack.location.POI
 import org.osmdroid.bonuspack.utils.BonusPackHelper
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.util.ManifestUtil
@@ -105,6 +110,7 @@ class MainActivity : AppCompatActivity(){
     private var isCameraPermissionGranted = false
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
@@ -113,6 +119,7 @@ class MainActivity : AppCompatActivity(){
         Configuration.getInstance().userAgentValue = packageName
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){ permissions ->
             isReadPermissionGranted = permissions[Manifest.permission.READ_EXTERNAL_STORAGE] ?: isReadPermissionGranted
             isWritePermissionGranted = permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE] ?: isWritePermissionGranted
@@ -178,8 +185,7 @@ class MainActivity : AppCompatActivity(){
 
 
         binding.cameraButton.setOnClickListener{
-            val cameraIntent = Intent(this, CameraActivity::class.java)
-            startActivity(cameraIntent)
+            showDialoge()
         }
         //start
         binding.editDeparture.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
@@ -202,6 +208,40 @@ class MainActivity : AppCompatActivity(){
 
         map.invalidate()
     }
+
+    private fun showDialoge() {
+        val dialog: Dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+
+        val currentTripLayout : LinearLayout = dialog.findViewById(R.id.layoutCurrentTrip)
+        val prevTripLayout : LinearLayout = dialog.findViewById(R.id.layoutPreviousTrip)
+        val takePictureLayout : LinearLayout = dialog.findViewById(R.id.layoutTakePicture)
+
+        currentTripLayout.setOnClickListener {
+            dialog.dismiss()
+            Toast.makeText(this@MainActivity, "Current Trip is Clicked", Toast.LENGTH_SHORT).show()
+        }
+
+        prevTripLayout.setOnClickListener {
+            dialog.dismiss()
+            Toast.makeText(this@MainActivity, "Previous Trips is Clicked", Toast.LENGTH_SHORT).show()
+        }
+
+        takePictureLayout.setOnClickListener {
+            //val cameraIntent = Intent(this, CameraActivity::class.java)
+            //startActivity(cameraIntent)
+            dialog.dismiss()
+            Toast.makeText(this@MainActivity, "Take a picture", Toast.LENGTH_SHORT).show()
+        }
+
+        dialog.show()
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.window?.setBackgroundDrawableResource(R.color.transparent)
+        dialog.window?.attributes?.windowAnimations ?: (R.style.DialogAnimation)
+        dialog.window?.setGravity(Gravity.BOTTOM)
+
+    }
+
 
     private fun getSpinnerVal(spinner: Spinner){
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
