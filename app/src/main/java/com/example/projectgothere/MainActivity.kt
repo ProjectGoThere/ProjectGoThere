@@ -2,16 +2,15 @@ package com.example.projectgothere
 
 import android.Manifest
 import android.content.Context
-import android.graphics.Paint
-import android.location.Address
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Paint
+import android.location.Address
 import android.location.Location
 import android.location.LocationManager
 import android.os.*
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
-import androidx.preference.PreferenceManager
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
@@ -19,21 +18,25 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.preference.PreferenceManager
 import com.example.projectgothere.databinding.ActivityMainBinding
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import org.osmdroid.bonuspack.routing.OSRMRoadManager
-import org.osmdroid.bonuspack.routing.Road
-import org.osmdroid.bonuspack.routing.RoadManager
-import androidx.core.content.res.ResourcesCompat
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
 import okhttp3.internal.userAgent
 import okio.IOException
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
+import org.osmdroid.bonuspack.location.GeoNamesPOIProvider
 import org.osmdroid.bonuspack.location.GeocoderNominatim
+import org.osmdroid.bonuspack.location.OverpassAPIProvider
+import org.osmdroid.bonuspack.location.POI
+import org.osmdroid.bonuspack.routing.OSRMRoadManager
+import org.osmdroid.bonuspack.routing.Road
+import org.osmdroid.bonuspack.routing.RoadManager
 import org.osmdroid.bonuspack.utils.BonusPackHelper
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.util.ManifestUtil
@@ -77,15 +80,16 @@ class MainActivity : AppCompatActivity(){
 
     private var mItineraryMarkers = FolderOverlay()
     private var roadNodeMarkers = FolderOverlay()
-    //private var mPOIs: ArrayList<POI>? = null
+    private var pois: ArrayList<POI>? = null
 
     private lateinit var roadManager: RoadManager
     private var roadOverlay: ArrayList<Polyline>? = null
     private lateinit var geonamesAccount: String
     private lateinit var mViaPointInfoWindow: WaypointInfoWindow
-    //private lateinit var poiTagText : AutoCompleteTextView
-    //private lateinit var mPoiMarkers:RadiusMarkerClusterer
+    private lateinit var poiTagText : AutoCompleteTextView
+    private lateinit var mPoiMarkers:RadiusMarkerClusterer
     private lateinit var locationOverlay:MyLocationNewOverlay
+    private lateinit var poiProvider: GeoNamesPOIProvider
 
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
     private var extraStops: Int = 2
@@ -145,8 +149,10 @@ class MainActivity : AppCompatActivity(){
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
         updateUIWithItineraryMarkers()
 
+        poiProvider = GeoNamesPOIProvider(geonamesAccount)
+
         if (roads != null) updateUIWithRoads(roads!!)
-        val mPoiMarkers = RadiusMarkerClusterer(this)
+        mPoiMarkers = RadiusMarkerClusterer(this)
         val clusterIcon =
             BonusPackHelper.getBitmapFromVectorDrawable(this, R.drawable.marker_poi_cluster)
         mPoiMarkers.setIcon(clusterIcon)
@@ -207,9 +213,9 @@ class MainActivity : AppCompatActivity(){
             ) {
                 val item = parent.getItemAtPosition(pos)
                 Log.d(TAG, item.toString()) //prints the text in spinner item.
-                val selectedStops = item.toString()
-                if (selectedStops.toIntOrNull() != null){
-                    extraStops = parseInt(selectedStops)
+                val selected = item.toString()
+                if (selected.toIntOrNull() != null){
+                    extraStops = parseInt(selected)
                 }
             }
 
@@ -470,22 +476,23 @@ class MainActivity : AppCompatActivity(){
                 roads = it
                 Log.d(TAG, "Roads: "+ roads.toString())
                 updateUIWithRoads(roads!!)
-                //getPOIAsync(poiTagText.text.toString())
+                poiTagText = AutoCompleteTextView(applicationContext)
+                getPOIAsync(poiTagText.text.toString())
             }
         )
     }
 
-    /*private fun getPOIAsync(tag: String?) {
+    private fun getPOIAsync(tag: String?) {
         mPoiMarkers.items.clear()
         pOILoadingTask(tag)
-    }*/
-    /*private fun getOSMTag(humanReadableFeature: String): String? {
+    }
+    private fun getOSMTag(humanReadableFeature: String): String? {
         val map = BonusPackHelper.parseStringMapResource(
             applicationContext, R.array.osm_poi_tags
         )
         return map[humanReadableFeature.lowercase(Locale.getDefault())]
-    }*/
-    /*private fun pOILoadingTask (vararg params: String?){
+    }
+    private fun pOILoadingTask (vararg params: String?){
         var message: String? = null
         val mFeatureTag = params[0]
         val bb = map.boundingBox
@@ -504,11 +511,11 @@ class MainActivity : AppCompatActivity(){
             }
         }
         if (result != null) {
-            mPOIs = result
+            pois = result
         }
         if (mFeatureTag == "") {
             //no search, no message
-        } else if (mPOIs == null) {
+        } else if (pois == null) {
             if (message != null) Toast.makeText(
                 applicationContext,
                 message,
@@ -520,15 +527,16 @@ class MainActivity : AppCompatActivity(){
         } else {
             Toast.makeText(
                 applicationContext,
-                mFeatureTag + " found:" + mPOIs!!.size,
+                mFeatureTag + " found:" + pois!!.size,
                 Toast.LENGTH_LONG
             ).show()
         }
-        updateUIWithPOI(mPOIs, mFeatureTag)
-    }*/
-    /*private fun updateUIWithPOI(pois: ArrayList<POI>?, featureTag: String?) {
+        updateUIWithPOI(pois, mFeatureTag)
+    }
+    private fun updateUIWithPOI(pois: ArrayList<POI>?, featureTag: String?) {
         if (pois != null) {
             val poiInfoWindow = POIInfoWindow(map)
+            //pois = poiProvider.getPOIInside(map.boundingBox, 30)
             for (poi in pois) {
                 val poiMarker = Marker(map)
                 poiMarker.title = poi.mType
@@ -547,7 +555,7 @@ class MainActivity : AppCompatActivity(){
         mPoiMarkers.name = featureTag
         mPoiMarkers.invalidate()
 
-    }*/
+    }
     private fun selectRoad(roadIndex: Int) {
         putRoadNodes(roads!![roadIndex])
         //Set route info in the text view:
