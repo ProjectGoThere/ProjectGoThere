@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.icu.text.DateFormat.getDateTimeInstance
+import com.example.projectgothere.databinding.ActivityCameraBinding
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -17,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.example.projectgothere.databinding.ActivityMainBinding
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -28,16 +30,23 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var cameraBtn: Button
     private lateinit var galleryBtn: Button
     private lateinit var currentPhotoPath: String
+    private lateinit var binding: ActivityCameraBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_camera)
+
+        binding = ActivityCameraBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
         selectedImage = findViewById(R.id.displayImageView)
         cameraBtn = findViewById(R.id.cameraBtn)
         galleryBtn = findViewById(R.id.galleryBtn)
 
-
-        cameraBtn.setOnClickListener { askCameraPermissions() }
+        binding.cameraBtn.setOnClickListener{
+            val cameraIntent = Intent(this, CameraActivity::class.java)
+            startActivity(cameraIntent)
+        }
         galleryBtn.setOnClickListener {
             val gallery = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             startActivityForResult(gallery, GALLERY_REQUEST_CODE)
