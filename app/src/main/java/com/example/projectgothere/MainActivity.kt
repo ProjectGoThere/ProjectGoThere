@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity(){
     private var completeAddress: String? = null
     private var desiredType: String? = null
     private var propertyType: String? = null
-    private lateinit var properties: ArrayList<String>
+    private lateinit var properties: ArrayList<Int>
 
     private var isReadPermissionGranted = false
     private var isWritePermissionGranted = false
@@ -264,8 +264,6 @@ class MainActivity : AppCompatActivity(){
                 else if (selected != "Filter by" || selected != "Stops Desired"){
                     desiredType = selected
                     Log.d(TAG, desiredType!!)
-                    filterPropertyType(desiredType!!)
-                    Log.d(TAG, properties.toString())
                 }
             }
 
@@ -273,7 +271,7 @@ class MainActivity : AppCompatActivity(){
         }
     }
 
-    private fun rand(start: Int = 0, end: Int = 1334): Int {
+    private fun rand(start: Int, end: Int): Int {
         require(!(start > end || end - start + 1 > Int.MAX_VALUE)) { "Illegal Argument" }
         return Random(System.nanoTime()).nextInt(end - start + 1) + start
     }
@@ -307,8 +305,13 @@ class MainActivity : AppCompatActivity(){
     private fun addWaypoints(extraStops: Int){
         var k = 0
         while (k<extraStops){
-            var waypointID = rand(0, 1334)
-            getAddressDataSnapshot(waypointID)
+            if (desiredType != null){
+                filterPropertyType(desiredType!!)
+            }
+            else {
+                var waypointID = rand(0, 1334)
+                getAddressDataSnapshot(waypointID)
+            }
             k++
         }
     }
@@ -346,14 +349,17 @@ class MainActivity : AppCompatActivity(){
                     //clear list
                     properties.clear()
                     for (i in snapshot.children){
-                        val property = i.getValue(String::class.java) //this is a hashmap, how to display?
-                        if (property != null) {
-                            //add to an array
-                            properties.add(property)
+                        //access waypointID of property, add to a list
+                        val propertyID = i.child("ID").getValue(Long::class.java)
+                        val currentWaypointID = propertyID?.toInt()
+                        if (currentWaypointID != null) {
+                            properties.add(currentWaypointID)
                         }
                     }
-                    //studentAdapter.submitList(studentsList)
-                    //binding.recyclerStudents.adapter = studentAdapter
+                    Log.d(TAG, properties.toString())
+                    var waypointID = rand(0, properties.size)
+                    getAddressDataSnapshot(properties[waypointID])
+
                 } else{
                     Toast.makeText(applicationContext, "Data is not found", Toast.LENGTH_SHORT).show()
                 }
@@ -420,8 +426,13 @@ class MainActivity : AppCompatActivity(){
                     Handler(Looper.getMainLooper()).post {
                         Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT)
                             .show()
-                        val waypointID = rand(0, 1334)
-                        getAddressDataSnapshot(waypointID)
+                        if (desiredType != null){
+                            val waypointID = rand(0, 1334)
+                            getAddressDataSnapshot(waypointID)
+                        }
+                        else{
+                            filterPropertyType(desiredType!!)
+                        }
                     }
                 } else {
                     val address: Address = it[0] //get first address
