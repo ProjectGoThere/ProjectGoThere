@@ -102,7 +102,6 @@ class MainActivity : AppCompatActivity(){
     private var isReadPermissionGranted = false
     private var isWritePermissionGranted = false
     private var isLocationPermissionGranted = false
-    private var isCameraPermissionGranted = false
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
 
 
@@ -119,7 +118,6 @@ class MainActivity : AppCompatActivity(){
             isReadPermissionGranted = permissions[Manifest.permission.READ_EXTERNAL_STORAGE] ?: isReadPermissionGranted
             isWritePermissionGranted = permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE] ?: isWritePermissionGranted
             isLocationPermissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: isLocationPermissionGranted
-            isCameraPermissionGranted = permissions[Manifest.permission.CAMERA] ?: isCameraPermissionGranted
         }
 
         map = binding.map
@@ -814,23 +812,16 @@ class MainActivity : AppCompatActivity(){
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
 
-                val isCameraPermission = ContextCompat.checkSelfPermission(
-                    applicationContext,
-                    Manifest.permission.CAMERA
-                ) == PackageManager.PERMISSION_GRANTED
-
                 val minSdkLevel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
                 isReadPermissionGranted = isReadPermission
                 isWritePermissionGranted = isWritePermission || minSdkLevel
                 isLocationPermissionGranted = isLocationPermission
-                isCameraPermissionGranted = isCameraPermission
 
                 val permissionRequest = mutableListOf<String>()
                 if (!isWritePermissionGranted) permissionRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 if (!isReadPermissionGranted) permissionRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
                 if (!isLocationPermission) permissionRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-                if (!isCameraPermission) permissionRequest.add(Manifest.permission.CAMERA)
 
                 if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())// send data to "onPostExecute"
             },
