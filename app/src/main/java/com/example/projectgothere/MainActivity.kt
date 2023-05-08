@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity(){
     private var completeAddress: String? = null
     private var desiredType: String? = null
     private var propertyType: String? = null
-    private var properties: ArrayList<String>? = null
+    private lateinit var properties: ArrayList<String>
 
     private var isReadPermissionGranted = false
     private var isWritePermissionGranted = false
@@ -177,6 +177,7 @@ class MainActivity : AppCompatActivity(){
         propAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
         spinPropType.adapter = propAdapter
         getSpinnerVal(spinPropType)
+        properties = ArrayList()
 
         val spinStopsDes : Spinner = binding.stopsDesiredDd
         val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
@@ -343,12 +344,12 @@ class MainActivity : AppCompatActivity(){
             override fun onDataChange(snapshot: DataSnapshot) {
                 if(snapshot.exists()){
                     //clear list
-                    properties?.clear()
+                    properties.clear()
                     for (i in snapshot.children){
                         val property = i.getValue(String::class.java) //this is a hashmap, how to display?
                         if (property != null) {
                             //add to an array
-                            properties?.add(property)
+                            properties.add(property)
                         }
                     }
                     //studentAdapter.submitList(studentsList)
