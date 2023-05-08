@@ -102,6 +102,9 @@ class MainActivity : AppCompatActivity(){
     private var countyAddress: String? = null
     private var streetAddress: String? = null
     private var completeAddress: String? = null
+    private var desiredType: String? = null
+    private var propertyType: String? = null
+    private var properties: ArrayList<String>? = null
 
     private var isReadPermissionGranted = false
     private var isWritePermissionGranted = false
@@ -247,10 +250,17 @@ class MainActivity : AppCompatActivity(){
                 id: Long
             ) {
                 val item = parent.getItemAtPosition(pos)
-                Log.d(TAG, item.toString()) //prints the text in spinner item.
-                val selectedStops = item.toString()
-                if (selectedStops.toIntOrNull() != null){
-                    extraStops = parseInt(selectedStops)
+                //Log.d(TAG, item.toString()) //prints the text in spinner item.
+                val selected = item.toString()
+                if (selected.toIntOrNull() != null){
+                    extraStops = parseInt(selected)
+                    Log.d(TAG, extraStops!!.toString())
+                }
+                else if (selected != "Filter by" || selected != "Stops Desired"){
+                    desiredType = selected
+                    Log.d(TAG, desiredType!!)
+                    filterPropertyType(desiredType!!)
+                    Log.d(TAG, properties.toString())
                 }
             }
 
@@ -292,13 +302,13 @@ class MainActivity : AppCompatActivity(){
     private fun addWaypoints(extraStops: Int){
         var k = 0
         while (k<extraStops){
-            val waypointID = rand(0, 1334)
-            getDataSnapshot(waypointID)
+            var waypointID = rand(0, 1334)
+            getAddressDataSnapshot(waypointID)
             k++
         }
     }
 
-    private fun getDataSnapshot(waypointID: Int){
+    private fun getAddressDataSnapshot(waypointID: Int){
         val rootRef = FirebaseDatabase.getInstance().reference
         val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
         val valueEventListener: ValueEventListener = object : ValueEventListener {
@@ -321,6 +331,33 @@ class MainActivity : AppCompatActivity(){
             }
         }
         addressRef.addListenerForSingleValueEvent(valueEventListener)
+    }
+    private fun filterPropertyType(desiredType: String){
+        val rootRef = FirebaseDatabase.getInstance().reference
+        val propertyRef = rootRef.child("SpreadSheet").orderByChild("Property Type").equalTo(desiredType)
+        val valueEventListener: ValueEventListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if(snapshot.exists()){
+                    //clear list
+                    properties?.clear()
+                    for (i in snapshot.children){
+                        val property = i.getValue(String::class.java) //this is a hashmap, how to display?
+                        if (property != null) {
+                            //add to an array
+                            properties?.add(property)
+                        }
+                    }
+                    //studentAdapter.submitList(studentsList)
+                    //binding.recyclerStudents.adapter = studentAdapter
+                } else{
+                    Toast.makeText(applicationContext, "Data is not found", Toast.LENGTH_SHORT).show()
+                }
+            }
+            override fun onCancelled(databaseError: DatabaseError) {
+                Log.d(TAG, databaseError.message)
+            }
+        }
+        propertyRef.addValueEventListener(valueEventListener)
     }
 
     private fun getAddress(p: GeoPoint): String {
@@ -378,6 +415,8 @@ class MainActivity : AppCompatActivity(){
                     Handler(Looper.getMainLooper()).post {
                         Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT)
                             .show()
+                        val waypointID = rand(0, 1334)
+                        getAddressDataSnapshot(waypointID)
                     }
                 } else {
                     val address: Address = it[0] //get first address
