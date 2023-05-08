@@ -37,6 +37,7 @@ import java.io.File
 import java.io.OutputStream
 import java.text.DateFormat.getDateTimeInstance
 import java.util.*
+import androidx.core.content.FileProvider
 import com.example.projectgothere.databinding.ActivityCameraBinding
 import java.io.File
 import java.io.IOException
