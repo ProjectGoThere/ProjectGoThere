@@ -1,48 +1,39 @@
 package com.example.projectgothere
 
-import com.example.projectgothere.databinding.ActivityCameraBinding
 import android.Manifest
 import android.content.ContentValues
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
+import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
-import androidx.camera.video.Recorder
-import androidx.camera.video.Recording
-import androidx.camera.video.VideoCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.projectgothere.databinding.ActivityCameraBinding
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import android.widget.Toast
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.core.Preview
-import androidx.camera.core.CameraSelector
-import android.util.Log
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.ImageProxy
-import androidx.camera.video.FallbackStrategy
-import androidx.camera.video.MediaStoreOutputOptions
-import androidx.camera.video.Quality
-import androidx.camera.video.QualitySelector
-import androidx.camera.video.VideoRecordEvent
-import androidx.core.content.PermissionChecker
-import java.nio.ByteBuffer
-import java.text.SimpleDateFormat
-import java.util.Locale
+
 
 typealias LumaListener = (luma: Double) -> Unit
 
 
 class CameraActivity : AppCompatActivity() {
     private lateinit var viewBinding: ActivityCameraBinding
-
     private var imageCapture: ImageCapture? = null
-    
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var gallery : Intent
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,8 +49,14 @@ class CameraActivity : AppCompatActivity() {
         }
 
         // Set up the listeners for take photo and video capture buttons
-        viewBinding.imageCaptureButton.setOnClickListener { takePhoto() }
-
+        viewBinding.captureBtn.setOnClickListener { takePhoto() }
+        viewBinding.galleryBtn.setOnClickListener{
+            fun onClick(v: View?) {
+                val gallery =
+                    Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                startActivity(gallery)
+            }
+        }
         cameraExecutor = Executors.newSingleThreadExecutor()
     }
 
@@ -111,6 +108,9 @@ class CameraActivity : AppCompatActivity() {
             cameraProviderFuture.addListener({
                 // Used to bind the lifecycle of cameras to the lifecycle owner
                 val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+
+                // Viewfinder
+                val viewFinder: PreviewView = findViewById(R.id.view_finder)
 
                 // Preview
                 val preview = Preview.Builder()
