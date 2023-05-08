@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
+import android.icu.text.DateFormat.getDateTimeInstance
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
