@@ -24,6 +24,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.example.projectgothere.databinding.ActivityCameraBinding
 import java.io.File
 import java.io.IOException
@@ -61,14 +62,11 @@ class CameraActivity : AppCompatActivity() {
         }
 
         // Set up the listeners for take photo and video capture buttons
-        viewBinding.captureBtn.setOnClickListener { takePhoto() }
+        viewBinding.captureBtn.setOnClickListener { askCameraPermissions() }
         viewBinding.galleryBtn.setOnClickListener{
-            fun onClick(v: View?) {
-                val gallery =
-                    Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                val gallery = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
                 startActivity(gallery)
             }
-        }
         cameraExecutor = Executors.newSingleThreadExecutor()
     }
 
@@ -118,48 +116,6 @@ class CameraActivity : AppCompatActivity() {
         return mime.getExtensionFromMimeType(c.getType(contentUri))
     }
 
-    private fun takePhoto() {
-        // Get a stable reference of the modifiable image capture use case
-        val imageCapture = imageCapture ?: return
-
-        // Create time stamped name and MediaStore entry.
-        val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
-            .format(System.currentTimeMillis())
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            if(Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
-            }
-        }
-
-        // Create output options object which contains file + metadata
-        val outputOptions = ImageCapture.OutputFileOptions
-            .Builder(contentResolver,
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                contentValues)
-            .build()
-
-        // Set up image capture listener, which is triggered after photo has
-        // been taken
-        imageCapture.takePicture(
-            outputOptions,
-            ContextCompat.getMainExecutor(this),
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onError(exc: ImageCaptureException) {
-                    Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
-                }
-
-                override fun
-                        onImageSaved(output: ImageCapture.OutputFileResults){
-                    val msg = "Photo capture succeeded: ${output.savedUri}"
-                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                    Log.d(TAG, msg)
-                }
-            }
-        )
-    }
-
     private fun startCamera() {
             val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
@@ -197,7 +153,7 @@ class CameraActivity : AppCompatActivity() {
 
 
     @Throws(IOException::class)
-    private fun createImageFile(): File? {
+    private fun createImageFile(): File {
         // Create an image file name
         val timeStamp = getDateTimeInstance().format(Date())
         val imageFileName = "JPEG_" + timeStamp + "_"
@@ -236,6 +192,29 @@ class CameraActivity : AppCompatActivity() {
                     "Permissions not granted by the user.",
                     Toast.LENGTH_SHORT).show()
                 finish()
+            }
+        }
+    }
+
+    private fun takePhoto() {
+        val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(packageManager) != null) {
+            // Create the File where the photo should go
+            var photoFile: File? = null
+            try {
+                photoFile = createImageFile()
+            } catch (ex: IOException) {
+            }
+            // Continue only if the File was successfully created
+            if (photoFile != null) {
+                val photoURI = FileProvider.getUriForFile(
+                    this,
+                    "com.example.projectgothere",
+                    photoFile
+                )
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+                startActivityForResult(takePictureIntent, CAMERA_REQUEST_CODE)
             }
         }
     }
