@@ -28,9 +28,6 @@ import java.text.DateFormat.getDateTimeInstance
 import java.text.SimpleDateFormat
 import java.util.*
 
-
-
-private const val TAG = "CAMERA_ACTIVITY"
 class CameraActivity : AppCompatActivity() {
     private val takeImageResult = registerForActivityResult(ActivityResultContracts.TakePicture()) { isSuccess ->
         if (isSuccess) {
@@ -47,7 +44,6 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private var latestTmpUri: Uri? = null
-    private var bitmap:Bitmap? = null
     private val previewImage by lazy { viewBinding.imageView }
 
     private lateinit var viewBinding: ActivityCameraBinding
@@ -167,28 +163,6 @@ class CameraActivity : AppCompatActivity() {
         }
         Toast.makeText(this,"Image saved",Toast.LENGTH_SHORT).show()
     }
-    /*private fun saveImageToGallery(bitmap:Bitmap){
-        val fos: OutputStream
-        try{
-            if (Build.VERSION.SDK_INT>= Build.VERSION_CODES.Q){
-                val resolver = contentResolver
-                val contentValues = ContentValues()
-                val sdf = getDateTimeInstance().format(FILENAME_FORMAT)
-                contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "Image_$sdf.jpg")
-                contentValues.put(MediaStore.MediaColumns.MIME_TYPE,"image/jpg")
-                contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH,Environment.DIRECTORY_PICTURES+File.separator+"TestFolder")
-                Log.d(TAG,"set mediastore values")
-                val imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,contentValues)
-                Log.d(TAG, "insert contentValues to external content uri")
-                fos = resolver.openOutputStream(Objects.requireNonNull(imageUri)!!)!!
-                bitmap.compress(Bitmap.CompressFormat.JPEG,100,fos)
-                Objects.requireNonNull(fos)
-                Toast.makeText(this,"Image Saved",Toast.LENGTH_SHORT).show()
-            }
-        } catch (e:Exception){
-            Toast.makeText(this,"Image Not Saved",Toast.LENGTH_SHORT).show()
-        }
-    }*/
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
@@ -212,7 +186,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     companion object {
-        //private const val TAG = "CameraXApp"
+        private const val TAG = "CameraActivity"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS =
