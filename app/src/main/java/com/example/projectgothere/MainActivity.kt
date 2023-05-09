@@ -98,6 +98,9 @@ class MainActivity : AppCompatActivity(){
     private var countyAddress: String? = null
     private var streetAddress: String? = null
     private var completeAddress: String? = null
+    private var desiredType: String? = null
+    private var propertyType: String? = null
+    private lateinit var properties: ArrayList<Int>
 
     private var isReadPermissionGranted = false
     private var isWritePermissionGranted = false
@@ -168,6 +171,7 @@ class MainActivity : AppCompatActivity(){
         propAdapter.setDropDownViewResource(android.R.layout.simple_spinner_item)
         spinPropType.adapter = propAdapter
         getSpinnerVal(spinPropType)
+        properties = ArrayList()
 
         val spinStopsDes : Spinner = binding.stopsDesiredDd
         val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
@@ -245,10 +249,15 @@ class MainActivity : AppCompatActivity(){
                 id: Long
             ) {
                 val item = parent.getItemAtPosition(pos)
-                Log.d(TAG, item.toString()) //prints the text in spinner item.
-                val selectedStops = item.toString()
-                if (selectedStops.toIntOrNull() != null){
-                    extraStops = parseInt(selectedStops)
+                //Log.d(TAG, item.toString()) //prints the text in spinner item.
+                val selected = item.toString()
+                if (selected.toIntOrNull() != null){
+                    extraStops = parseInt(selected)
+                    Log.d(TAG, extraStops!!.toString())
+                }
+                else if (selected != "Filter by" || selected != "Stops Desired"){
+                    desiredType = selected
+                    Log.d(TAG, desiredType!!)
                 }
             }
 
@@ -256,7 +265,7 @@ class MainActivity : AppCompatActivity(){
         }
     }
 
-    private fun rand(start: Int = 0, end: Int = 1334): Int {
+    private fun rand(start: Int, end: Int): Int {
         require(!(start > end || end - start + 1 > Int.MAX_VALUE)) { "Illegal Argument" }
         return Random(System.nanoTime()).nextInt(end - start + 1) + start
     }
@@ -290,13 +299,18 @@ class MainActivity : AppCompatActivity(){
     private fun addWaypoints(extraStops: Int){
         var k = 0
         while (k<extraStops){
-            val waypointID = rand(0, 1334)
-            getDataSnapshot(waypointID)
+            if (desiredType != null){
+                filterPropertyType(desiredType!!)
+            }
+            else {
+                var waypointID = rand(0, 1334)
+                getAddressDataSnapshot(waypointID)
+            }
             k++
         }
     }
 
-    private fun getDataSnapshot(waypointID: Int){
+    private fun getAddressDataSnapshot(waypointID: Int){
         val rootRef = FirebaseDatabase.getInstance().reference
         val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
         val valueEventListener: ValueEventListener = object : ValueEventListener {
@@ -319,6 +333,36 @@ class MainActivity : AppCompatActivity(){
             }
         }
         addressRef.addListenerForSingleValueEvent(valueEventListener)
+    }
+    private fun filterPropertyType(desiredType: String){
+        val rootRef = FirebaseDatabase.getInstance().reference
+        val propertyRef = rootRef.child("SpreadSheet").orderByChild("Property Type").equalTo(desiredType)
+        val valueEventListener: ValueEventListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if(snapshot.exists()){
+                    //clear list
+                    properties.clear()
+                    for (i in snapshot.children){
+                        //access waypointID of property, add to a list
+                        val propertyID = i.child("ID").getValue(Long::class.java)
+                        val currentWaypointID = propertyID?.toInt()
+                        if (currentWaypointID != null) {
+                            properties.add(currentWaypointID)
+                        }
+                    }
+                    Log.d(TAG, properties.toString())
+                    var waypointID = rand(0, properties.size)
+                    getAddressDataSnapshot(properties[waypointID])
+
+                } else{
+                    Toast.makeText(applicationContext, "Data is not found", Toast.LENGTH_SHORT).show()
+                }
+            }
+            override fun onCancelled(databaseError: DatabaseError) {
+                Log.d(TAG, databaseError.message)
+            }
+        }
+        propertyRef.addValueEventListener(valueEventListener)
     }
 
     private fun getAddress(p: GeoPoint): String {
@@ -376,6 +420,13 @@ class MainActivity : AppCompatActivity(){
                     Handler(Looper.getMainLooper()).post {
                         Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT)
                             .show()
+                        if (desiredType != null){
+                            val waypointID = rand(0, 1334)
+                            getAddressDataSnapshot(waypointID)
+                        }
+                        else{
+                            filterPropertyType(desiredType!!)
+                        }
                     }
                 } else {
                     val address: Address = it[0] //get first address
