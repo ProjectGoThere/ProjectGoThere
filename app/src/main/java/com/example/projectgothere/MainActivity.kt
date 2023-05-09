@@ -351,7 +351,7 @@ class MainActivity : AppCompatActivity(){
                         }
                     }
                     Log.d(TAG, properties.toString())
-                    var waypointID = rand(0, properties.size)
+                    var waypointID = rand(0, properties.size-1)
                     getAddressDataSnapshot(properties[waypointID])
 
                 } else{
