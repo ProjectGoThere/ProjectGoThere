@@ -53,6 +53,7 @@ import org.osmdroid.views.overlay.infowindow.BasicInfoWindow
 import org.osmdroid.views.overlay.infowindow.MarkerInfoWindow
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import java.io.File
 import java.lang.Integer.parseInt
 import java.util.*
 import kotlin.random.Random
@@ -67,6 +68,9 @@ private const val WAYPOINT_INDEX = -3
 private var startingPoint: GeoPoint? = null
 private var destinationPoint: GeoPoint? = null
 private lateinit var waypoints: ArrayList<GeoPoint>
+private const val appDirectoryName = "ProjectGoThere"
+private val imageRoot = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+    appDirectoryName)
 
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity(){
