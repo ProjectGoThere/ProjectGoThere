@@ -357,7 +357,8 @@ class MainActivity : AppCompatActivity(){
                         }
                     }
                     Log.d(TAG, properties.toString())
-                    var waypointID = rand(0, properties.size)
+                    var waypointID = rand(0, properties.size-1)
+                    Log.d(TAG, properties[waypointID].toString())
                     getAddressDataSnapshot(properties[waypointID])
 
                 } else{
@@ -426,11 +427,13 @@ class MainActivity : AppCompatActivity(){
                     Handler(Looper.getMainLooper()).post {
                         Toast.makeText(applicationContext, "Address not found", Toast.LENGTH_SHORT)
                             .show()
-                        if (desiredType != null){
+                        if (desiredType == null){
+                            Log.d(TAG, "Elise if unfiltered called")
                             val waypointID = rand(0, 1334)
                             getAddressDataSnapshot(waypointID)
                         }
                         else{
+                            Log.d(TAG, "Else if filtered called")
                             filterPropertyType(desiredType!!)
                         }
                     }
