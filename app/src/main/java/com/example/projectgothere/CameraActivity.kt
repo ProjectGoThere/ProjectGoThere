@@ -4,11 +4,13 @@ import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,13 +22,15 @@ import androidx.lifecycle.lifecycleScope
 import com.example.projectgothere.databinding.ActivityCameraBinding
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileOutputStream
 import java.io.OutputStream
 import java.text.DateFormat.getDateTimeInstance
+import java.text.SimpleDateFormat
 import java.util.*
 
 
 
-
+private const val TAG = "CAMERA_ACTIVITY"
 class CameraActivity : AppCompatActivity() {
     private val takeImageResult = registerForActivityResult(ActivityResultContracts.TakePicture()) { isSuccess ->
         if (isSuccess) {
@@ -37,11 +41,13 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private val selectImageFromGalleryResult = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { previewImage.setImageURI(uri) }
+        uri?.let {
+            previewImage.setImageURI(uri)
+        }
     }
 
     private var latestTmpUri: Uri? = null
-
+    private var bitmap:Bitmap? = null
     private val previewImage by lazy { viewBinding.imageView }
 
     private lateinit var viewBinding: ActivityCameraBinding
@@ -70,8 +76,7 @@ class CameraActivity : AppCompatActivity() {
             selectImageFromGallery()
         }
         viewBinding.addGallery.setOnClickListener{
-            val bitmap = viewBinding.imageView.drawToBitmap()
-            saveImageToGallery(bitmap)
+            saveToGallery()
         }
         viewBinding.back.setOnClickListener{
             finish()
@@ -128,7 +133,41 @@ class CameraActivity : AppCompatActivity() {
         if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())
     }
 
-    private fun saveImageToGallery(bitmap:Bitmap){
+    private fun saveToGallery() {
+        val bitmapDrawable = viewBinding.imageView.drawable as BitmapDrawable
+        val bitmap = bitmapDrawable.bitmap
+        var outputStream: FileOutputStream? = null
+        val file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+        val dir = File(file.absolutePath + "/MyPics")
+        if (!dir.exists()) dir.mkdirs()
+        val date = Calendar.getInstance().time
+        val sdf = SimpleDateFormat(FILENAME_FORMAT,Locale.US)
+        val fdate = sdf.format(date)
+        val filename = String.format("%s.png", fdate)
+        val outFile = File(dir, filename)
+        Log.d(TAG,"$dir, $filename")
+        try {
+            outputStream = FileOutputStream(outFile)
+        } catch (e: java.lang.Exception) {
+            Toast.makeText(this, "Image Failed to Save",Toast.LENGTH_SHORT).show()
+            e.printStackTrace()
+        }
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        try {
+            outputStream?.flush()
+        } catch (e: java.lang.Exception) {
+            Toast.makeText(this, "Image Failed to Save",Toast.LENGTH_SHORT).show()
+            e.printStackTrace()
+        }
+        try {
+            outputStream?.close()
+        } catch (e: java.lang.Exception) {
+            Toast.makeText(this, "Image Failed to Save",Toast.LENGTH_SHORT).show()
+            e.printStackTrace()
+        }
+        Toast.makeText(this,"Image saved",Toast.LENGTH_SHORT).show()
+    }
+    /*private fun saveImageToGallery(bitmap:Bitmap){
         val fos: OutputStream
         try{
             if (Build.VERSION.SDK_INT>= Build.VERSION_CODES.Q){
@@ -138,7 +177,9 @@ class CameraActivity : AppCompatActivity() {
                 contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "Image_$sdf.jpg")
                 contentValues.put(MediaStore.MediaColumns.MIME_TYPE,"image/jpg")
                 contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH,Environment.DIRECTORY_PICTURES+File.separator+"TestFolder")
+                Log.d(TAG,"set mediastore values")
                 val imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,contentValues)
+                Log.d(TAG, "insert contentValues to external content uri")
                 fos = resolver.openOutputStream(Objects.requireNonNull(imageUri)!!)!!
                 bitmap.compress(Bitmap.CompressFormat.JPEG,100,fos)
                 Objects.requireNonNull(fos)
@@ -147,7 +188,7 @@ class CameraActivity : AppCompatActivity() {
         } catch (e:Exception){
             Toast.makeText(this,"Image Not Saved",Toast.LENGTH_SHORT).show()
         }
-    }
+    }*/
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
@@ -171,7 +212,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     companion object {
-        private const val TAG = "CameraXApp"
+        //private const val TAG = "CameraXApp"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS =
