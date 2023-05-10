@@ -133,8 +133,9 @@ class CameraActivity : AppCompatActivity() {
         val bitmapDrawable = viewBinding.imageView.drawable as BitmapDrawable
         val bitmap = bitmapDrawable.bitmap
         var outputStream: FileOutputStream? = null
-        val file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        val dir = File(file.absolutePath + "/MyPics")
+        val file = intent.getStringExtra("rootDirPath")
+        val curDir = intent.getStringExtra("currentDir")
+        val dir = File(file+File.separator+curDir)
         if (!dir.exists()) dir.mkdirs()
         val date = Calendar.getInstance().time
         val sdf = SimpleDateFormat(FILENAME_FORMAT,Locale.US)
@@ -174,9 +175,7 @@ class CameraActivity : AppCompatActivity() {
         IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
-                //startCamera()
-            } else {
+            if (!allPermissionsGranted()) {
                 Toast.makeText(this,
                     "Permissions not granted by the user.",
                     Toast.LENGTH_SHORT).show()

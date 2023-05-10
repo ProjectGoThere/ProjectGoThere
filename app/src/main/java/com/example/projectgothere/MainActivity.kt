@@ -69,12 +69,11 @@ private var startingPoint: GeoPoint? = null
 private var destinationPoint: GeoPoint? = null
 private lateinit var waypoints: ArrayList<GeoPoint>
 private const val appDirectoryName = "ProjectGoThere"
-private val imageRoot = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-    appDirectoryName)
-
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity(){
-
+    private val imageRoot = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+        appDirectoryName)
+    private var curTripDir = "MyPics"
     private var currentPoint: GeoPoint? = null
     private var startMarker : Marker? = null
     private var endMarker : Marker? = null
@@ -230,6 +229,8 @@ class MainActivity : AppCompatActivity(){
         takePictureLayout.setOnClickListener {
             dialog.dismiss()
             val cameraIntent = Intent(this, CameraActivity::class.java)
+            cameraIntent.putExtra("rootDirPath",imageRoot.absolutePath)
+            cameraIntent.putExtra("currentDir",curTripDir)
             startActivity(cameraIntent)
         }
 
