@@ -54,5 +54,10 @@
             android:resource="@xml/provider_paths"/>
     </provider>
     </application>
-
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="image/*" />
+        </intent>
+    </queries>
 </manifest>

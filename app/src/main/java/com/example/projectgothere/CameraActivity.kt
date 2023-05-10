@@ -91,7 +91,7 @@ class CameraActivity : AppCompatActivity() {
     private fun selectImageFromGallery() = selectImageFromGalleryResult.launch("image/*")
 
     private fun getTmpFileUri(): Uri {
-        val tmpFile = File.createTempFile("tmp_image_file", ".png", cacheDir).apply {
+        val tmpFile = File.createTempFile("tmp_image_file", ".jpeg", cacheDir).apply {
             createNewFile()
             deleteOnExit()
         }
@@ -140,7 +140,7 @@ class CameraActivity : AppCompatActivity() {
         val date = Calendar.getInstance().time
         val sdf = SimpleDateFormat(FILENAME_FORMAT,Locale.US)
         val fdate = sdf.format(date)
-        val filename = String.format("%s.png", fdate)
+        val filename = String.format("%s.jpeg", fdate)
         val outFile = File(dir, filename)
         Log.d(TAG,"$dir, $filename")
         try {
@@ -149,7 +149,7 @@ class CameraActivity : AppCompatActivity() {
             Toast.makeText(this, "Image Failed to Save",Toast.LENGTH_SHORT).show()
             e.printStackTrace()
         }
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
         try {
             outputStream?.flush()
         } catch (e: java.lang.Exception) {
@@ -186,7 +186,7 @@ class CameraActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "CameraActivity"
-        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
+        private const val FILENAME_FORMAT = "yyyy-MM-dd HH:mm:ss"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS =
             mutableListOf (

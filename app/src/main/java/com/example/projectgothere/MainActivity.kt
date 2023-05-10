@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.location.Address
 import android.location.Location
 import android.location.LocationManager
+import android.net.Uri
 import android.os.*
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
@@ -18,10 +19,12 @@ import android.view.ViewGroup
 import android.view.Window
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
@@ -71,8 +74,7 @@ private lateinit var waypoints: ArrayList<GeoPoint>
 private const val appDirectoryName = "ProjectGoThere"
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity(){
-    private val imageRoot = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-        appDirectoryName)
+    private lateinit var imageRoot: File
     private var curTripDir = "MyPics"
     private var currentPoint: GeoPoint? = null
     private var startMarker : Marker? = null
@@ -114,6 +116,9 @@ class MainActivity : AppCompatActivity(){
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
+        imageRoot = File(this.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+            File.separator+appDirectoryName)
+        if (!imageRoot.exists()) imageRoot.mkdirs()
         super.onCreate(savedInstanceState)
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         Configuration.getInstance().userAgentValue = packageName
@@ -218,7 +223,14 @@ class MainActivity : AppCompatActivity(){
 
         currentTripLayout.setOnClickListener {
             dialog.dismiss()
-            Toast.makeText(this@MainActivity, "Current Trip is Clicked", Toast.LENGTH_SHORT).show()
+            val curDirPath = File(imageRoot.absolutePath+File.separator+curTripDir+File.separator)
+            if (!curDirPath.exists()) curDirPath.mkdirs()
+            val fileUri = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",curDirPath)
+            val intent = Intent(Intent.ACTION_VIEW,fileUri)
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+            }
         }
 
         prevTripLayout.setOnClickListener {
