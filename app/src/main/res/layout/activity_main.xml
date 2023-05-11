@@ -83,13 +83,20 @@
         android:layout_below="@id/search_panel">
         </org.osmdroid.views.MapView>
     <ImageButton
+        android:id="@+id/trackingModeButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:background="@drawable/btn_tracking_off" />
+    <ImageButton
         android:id="@+id/cameraButton"
         style="?android:attr/borderlessButtonStyle"
         android:background="@android:color/transparent"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:contentDescription="A camera icon"
+        android:layout_alignParentEnd="true"
+        android:contentDescription="@string/camera_icon"
         android:src="@drawable/ic_camera" />
 </RelativeLayout>

@@ -34,6 +34,7 @@
     <string name="capture">Capture New…</string>
     <string name="addToGallery">Add picture to gallery</string>
     <string name="back">Back to Map</string>
+    <string name="camera_icon">A camera icon</string>
 
     <string-array name="propTypes">
         <item>Filter by</item>
