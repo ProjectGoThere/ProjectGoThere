@@ -75,7 +75,8 @@ private const val appDirectoryName = "ProjectGoThere"
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity(){
     private lateinit var imageRoot: File
-    private var curTripDir = "MyPics"
+    private var curTripName = "MyTrips"
+    private lateinit var curTripDir: File
     private var currentPoint: GeoPoint? = null
     private var startMarker : Marker? = null
     private var endMarker : Marker? = null
@@ -119,6 +120,8 @@ class MainActivity : AppCompatActivity(){
         imageRoot = File(this.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
             File.separator+appDirectoryName)
         if (!imageRoot.exists()) imageRoot.mkdirs()
+        curTripDir = File(imageRoot.absolutePath, File.separator+curTripName)
+        if (!curTripDir.exists()) curTripDir.mkdirs()
         super.onCreate(savedInstanceState)
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         Configuration.getInstance().userAgentValue = packageName
@@ -223,7 +226,7 @@ class MainActivity : AppCompatActivity(){
 
         currentTripLayout.setOnClickListener {
             dialog.dismiss()
-            val curDirPath = File(imageRoot.absolutePath+File.separator+curTripDir)
+            val curDirPath = File(curTripDir.absolutePath)
             if (!curDirPath.exists()) curDirPath.mkdirs()
             val intent = Intent(this,ViewPicturesActivity::class.java)
             intent.putExtra("Direct",curDirPath.absolutePath)
@@ -232,14 +235,16 @@ class MainActivity : AppCompatActivity(){
 
         prevTripLayout.setOnClickListener {
             dialog.dismiss()
-            Toast.makeText(this@MainActivity, "Previous Trips is Clicked", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this,ListTripsActivity::class.java)
+            intent.putExtra("rootDir",imageRoot.absolutePath)
+            startActivity(intent)
         }
 
         takePictureLayout.setOnClickListener {
             dialog.dismiss()
             val cameraIntent = Intent(this, CameraActivity::class.java)
             cameraIntent.putExtra("rootDirPath",imageRoot.absolutePath)
-            cameraIntent.putExtra("currentDir",curTripDir)
+            cameraIntent.putExtra("currentDir",curTripDir.absolutePath)
             startActivity(cameraIntent)
         }
 
@@ -315,7 +320,7 @@ class MainActivity : AppCompatActivity(){
                 filterPropertyType(desiredType!!)
             }
             else {
-                var waypointID = rand(0, 1334)
+                val waypointID = rand(0, 1334)
                 getAddressDataSnapshot(waypointID)
             }
             k++
@@ -363,7 +368,7 @@ class MainActivity : AppCompatActivity(){
                         }
                     }
                     Log.d(TAG, properties.toString())
-                    var waypointID = rand(0, properties.size)
+                    val waypointID = rand(0, properties.size)
                     getAddressDataSnapshot(properties[waypointID])
 
                 } else{

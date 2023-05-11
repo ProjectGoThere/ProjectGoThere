@@ -133,10 +133,8 @@ class CameraActivity : AppCompatActivity() {
         val bitmapDrawable = viewBinding.imageView.drawable as BitmapDrawable
         val bitmap = bitmapDrawable.bitmap
         var outputStream: FileOutputStream? = null
-        val file = intent.getStringExtra("rootDirPath")
         val curDir = intent.getStringExtra("currentDir")
-        val dir = File(file+File.separator+curDir)
-        if (!dir.exists()) dir.mkdirs()
+        val dir = File(curDir)
         val date = Calendar.getInstance().time
         val sdf = SimpleDateFormat(FILENAME_FORMAT,Locale.US)
         val fdate = sdf.format(date)

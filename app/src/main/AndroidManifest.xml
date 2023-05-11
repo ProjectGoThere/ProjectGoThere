@@ -36,6 +36,9 @@
         android:theme="@style/Theme.ProjectGoThere"
         tools:targetApi="31">
         <activity
+            android:name=".ListTripsActivity"
+            android:exported="false" />
+        <activity
             android:name=".ViewPicturesActivity"
             android:exported="false" />
         <activity

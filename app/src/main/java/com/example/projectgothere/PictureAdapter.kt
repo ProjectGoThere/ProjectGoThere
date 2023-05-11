@@ -10,7 +10,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.viewpager.widget.PagerAdapter
 
-class MyAdapter(var context: Context, var images:Array<Uri>):PagerAdapter(){
+class PictureAdapter(var context: Context, var images:Array<Uri>):PagerAdapter(){
     private var layoutInflater:LayoutInflater
 
     override fun isViewFromObject(view: View, `object`: Any): Boolean {
@@ -18,7 +18,7 @@ class MyAdapter(var context: Context, var images:Array<Uri>):PagerAdapter(){
     }
 
     override fun instantiateItem(container: ViewGroup, position: Int): Any {
-        val view = layoutInflater.inflate(R.layout.item,container,false)
+        val view = layoutInflater.inflate(R.layout.picture_item,container,false)
         val imageView = view.findViewById<View>(R.id.imageView) as ImageView
         imageView.setImageURI(images[position])
         container.addView(view)

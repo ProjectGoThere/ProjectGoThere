@@ -28,7 +28,7 @@
     <string name="start_capture">Start Capture</string>
     <string name="stop_capture">Stop Capture</string>
     <string name="see_current_trip">Current Trip</string>
-    <string name="see_previous_trip">Previous Trip</string>
+    <string name="see_previous_trip">Previous Trips</string>
     <string name="take_picture">Take picture</string>
     <string name="select_pic">Select Picture…</string>
     <string name="capture">Capture New…</string>

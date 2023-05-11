@@ -12,7 +12,7 @@ class ViewPicturesActivity : AppCompatActivity() {
     private var viewPager: ViewPager? = null
     private val images = arrayListOf<Uri>()
     private lateinit var dir:File
-    private var myAdapter:MyAdapter? = null
+    private var pictureAdapter:PictureAdapter? = null
     private lateinit var binding: ActivityViewPicturesBinding
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,8 +21,8 @@ class ViewPicturesActivity : AppCompatActivity() {
         dir = File(intent.getStringExtra("Direct")!!)
         getImages()
         viewPager = binding.viewPager
-        myAdapter = MyAdapter(this, images.toTypedArray())
-        viewPager!!.adapter = myAdapter
+        pictureAdapter = PictureAdapter(this, images.toTypedArray())
+        viewPager!!.adapter = pictureAdapter
         binding.tripTitle.text = dir.name
         binding.back.setOnClickListener{
             finish()
