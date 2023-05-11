@@ -16,6 +16,8 @@
     <color name="brown_200">#997950</color>
     <color name="brown_700">#43270F</color>
     <color name="tan">#D2B48C</color>
+    <color name="tan_75">#B3D2B48C</color>
     <color name="sky_blue">#10BBE5</color>
     <color name="transparent">#00000000</color>
+    <color name="underline">#992C5E1A</color>
 </resources>

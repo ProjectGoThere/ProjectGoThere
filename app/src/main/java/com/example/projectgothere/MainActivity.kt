@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.location.Address
 import android.location.Location
 import android.location.LocationManager
+import android.net.Uri
 import android.os.*
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
@@ -18,6 +19,7 @@ import android.view.ViewGroup
 import android.view.Window
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -53,6 +55,7 @@ import org.osmdroid.views.overlay.infowindow.BasicInfoWindow
 import org.osmdroid.views.overlay.infowindow.MarkerInfoWindow
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import java.io.File
 import java.lang.Integer.parseInt
 import java.util.*
 import kotlin.random.Random
@@ -67,10 +70,12 @@ private const val WAYPOINT_INDEX = -3
 private var startingPoint: GeoPoint? = null
 private var destinationPoint: GeoPoint? = null
 private lateinit var waypoints: ArrayList<GeoPoint>
-
+private const val appDirectoryName = "ProjectGoThere"
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity(){
-
+    private lateinit var imageRoot: File
+    private var curTripName = "MyTrips"
+    private lateinit var curTripDir: File
     private var currentPoint: GeoPoint? = null
     private var startMarker : Marker? = null
     private var endMarker : Marker? = null
@@ -105,13 +110,17 @@ class MainActivity : AppCompatActivity(){
     private var isReadPermissionGranted = false
     private var isWritePermissionGranted = false
     private var isLocationPermissionGranted = false
-    private var isCameraPermissionGranted = false
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val policy = ThreadPolicy.Builder().permitAll().build()
         StrictMode.setThreadPolicy(policy)
+        imageRoot = File(this.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+            File.separator+appDirectoryName)
+        if (!imageRoot.exists()) imageRoot.mkdirs()
+        curTripDir = File(imageRoot.absolutePath, File.separator+curTripName)
+        if (!curTripDir.exists()) curTripDir.mkdirs()
         super.onCreate(savedInstanceState)
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
         Configuration.getInstance().userAgentValue = packageName
@@ -122,7 +131,6 @@ class MainActivity : AppCompatActivity(){
             isReadPermissionGranted = permissions[Manifest.permission.READ_EXTERNAL_STORAGE] ?: isReadPermissionGranted
             isWritePermissionGranted = permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE] ?: isWritePermissionGranted
             isLocationPermissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: isLocationPermissionGranted
-            isCameraPermissionGranted = permissions[Manifest.permission.CAMERA] ?: isCameraPermissionGranted
         }
 
         map = binding.map
@@ -217,17 +225,25 @@ class MainActivity : AppCompatActivity(){
 
         currentTripLayout.setOnClickListener {
             dialog.dismiss()
-            Toast.makeText(this@MainActivity, "Current Trip is Clicked", Toast.LENGTH_SHORT).show()
+            val curDirPath = File(curTripDir.absolutePath)
+            if (!curDirPath.exists()) curDirPath.mkdirs()
+            val intent = Intent(this,ViewPicturesActivity::class.java)
+            intent.putExtra("Direct",curDirPath.absolutePath)
+            startActivity(intent)
         }
 
         prevTripLayout.setOnClickListener {
             dialog.dismiss()
-            Toast.makeText(this@MainActivity, "Previous Trips is Clicked", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this,ListTripsActivity::class.java)
+            intent.putExtra("rootDir",imageRoot.absolutePath)
+            startActivity(intent)
         }
 
         takePictureLayout.setOnClickListener {
             dialog.dismiss()
             val cameraIntent = Intent(this, CameraActivity::class.java)
+            cameraIntent.putExtra("rootDirPath",imageRoot.absolutePath)
+            cameraIntent.putExtra("currentDir",curTripDir.absolutePath)
             startActivity(cameraIntent)
         }
 
@@ -303,7 +319,7 @@ class MainActivity : AppCompatActivity(){
                 filterPropertyType(desiredType!!)
             }
             else {
-                var waypointID = rand(0, 1334)
+                val waypointID = rand(0, 1334)
                 getAddressDataSnapshot(waypointID)
             }
             k++
@@ -351,7 +367,7 @@ class MainActivity : AppCompatActivity(){
                         }
                     }
                     Log.d(TAG, properties.toString())
-                    var waypointID = rand(0, properties.size-1)
+                    val waypointID = rand(0, properties.size)
                     getAddressDataSnapshot(properties[waypointID])
 
                 } else{
@@ -865,23 +881,16 @@ class MainActivity : AppCompatActivity(){
                     Manifest.permission.ACCESS_FINE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
 
-                val isCameraPermission = ContextCompat.checkSelfPermission(
-                    applicationContext,
-                    Manifest.permission.CAMERA
-                ) == PackageManager.PERMISSION_GRANTED
-
                 val minSdkLevel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
                 isReadPermissionGranted = isReadPermission
                 isWritePermissionGranted = isWritePermission || minSdkLevel
                 isLocationPermissionGranted = isLocationPermission
-                isCameraPermissionGranted = isCameraPermission
 
                 val permissionRequest = mutableListOf<String>()
                 if (!isWritePermissionGranted) permissionRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 if (!isReadPermissionGranted) permissionRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
                 if (!isLocationPermission) permissionRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-                if (!isCameraPermission) permissionRequest.add(Manifest.permission.CAMERA)
 
                 if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())// send data to "onPostExecute"
             },
