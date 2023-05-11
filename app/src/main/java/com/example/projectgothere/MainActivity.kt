@@ -223,14 +223,11 @@ class MainActivity : AppCompatActivity(){
 
         currentTripLayout.setOnClickListener {
             dialog.dismiss()
-            val curDirPath = File(imageRoot.absolutePath+File.separator+curTripDir+File.separator)
+            val curDirPath = File(imageRoot.absolutePath+File.separator+curTripDir)
             if (!curDirPath.exists()) curDirPath.mkdirs()
-            val fileUri = FileProvider.getUriForFile(this, BuildConfig.APPLICATION_ID + ".provider",curDirPath)
-            val intent = Intent(Intent.ACTION_VIEW,fileUri)
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            if (intent.resolveActivity(packageManager) != null) {
-                startActivity(intent)
-            }
+            val intent = Intent(this,ViewPicturesActivity::class.java)
+            intent.putExtra("Direct",curDirPath.absolutePath)
+            startActivity(intent)
         }
 
         prevTripLayout.setOnClickListener {
