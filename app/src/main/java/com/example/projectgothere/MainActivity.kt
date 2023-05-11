@@ -9,7 +9,6 @@ import android.graphics.Paint
 import android.location.Address
 import android.location.Location
 import android.location.LocationManager
-import android.net.Uri
 import android.os.*
 import android.os.StrictMode.ThreadPolicy
 import android.util.Log
@@ -19,7 +18,6 @@ import android.view.ViewGroup
 import android.view.Window
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
-import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -111,6 +109,8 @@ class MainActivity : AppCompatActivity(){
     private var isWritePermissionGranted = false
     private var isLocationPermissionGranted = false
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+    private var trackingMode : Boolean = true
+    private var mAzimuthAngleSpeed : Float = 0.0f
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -210,6 +210,11 @@ class MainActivity : AppCompatActivity(){
                 R.id.editDestination
             )
         } //end
+
+        binding.trackingModeButton.setOnClickListener{
+                trackingMode = !trackingMode
+                updateUIWithTrackingMode()
+        }
 
         map.invalidate()
     }
@@ -403,6 +408,21 @@ class MainActivity : AppCompatActivity(){
             null
         }
         return theAddress ?: ""
+    }
+
+    private fun updateUIWithTrackingMode() {
+        if (trackingMode) {
+            binding.trackingModeButton.setBackgroundResource(R.drawable.btn_tracking_on)
+            if (locationOverlay.isEnabled && locationOverlay.myLocation != null) {
+                map.controller.animateTo(locationOverlay.myLocation)
+            }
+            map.mapOrientation = -mAzimuthAngleSpeed
+            binding.trackingModeButton.setKeepScreenOn(true)
+        } else {
+            binding.trackingModeButton.setBackgroundResource(R.drawable.btn_tracking_off)
+            map.mapOrientation = 0.0f
+            binding.trackingModeButton.setKeepScreenOn(false)
+        }
     }
 
     private fun geocodingTask(vararg params: Any){
