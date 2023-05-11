@@ -417,7 +417,7 @@ class MainActivity : AppCompatActivity(){
         }
         return theAddress ?: ""
     }
-    
+
 
     private fun updateUIWithTrackingMode(locationOverlay: MyLocationNewOverlay) {
         if (trackingMode) {
