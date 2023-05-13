@@ -36,11 +36,11 @@ import okio.IOException
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
 import org.osmdroid.bonuspack.location.GeoNamesPOIProvider
 import org.osmdroid.bonuspack.location.GeocoderNominatim
+import org.osmdroid.bonuspack.location.OverpassAPIProvider
+import org.osmdroid.bonuspack.location.POI
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
-import org.osmdroid.bonuspack.location.OverpassAPIProvider
-import org.osmdroid.bonuspack.location.POI
 import org.osmdroid.bonuspack.utils.BonusPackHelper
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.util.ManifestUtil
@@ -84,7 +84,6 @@ class MainActivity : AppCompatActivity(){
 
     private var mItineraryMarkers = FolderOverlay()
     private var roadNodeMarkers = FolderOverlay()
-    private var pois: ArrayList<POI>? = null
 
     private lateinit var roadManager: RoadManager
     private var roadOverlay: ArrayList<Polyline>? = null
@@ -93,7 +92,6 @@ class MainActivity : AppCompatActivity(){
     private lateinit var poiTagText : AutoCompleteTextView
     private lateinit var mPoiMarkers:RadiusMarkerClusterer
     private lateinit var locationOverlay:MyLocationNewOverlay
-    private lateinit var poiProvider: GeoNamesPOIProvider
 
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
     private var extraStops: Int = 2
@@ -103,8 +101,8 @@ class MainActivity : AppCompatActivity(){
     private var streetAddress: String? = null
     private var completeAddress: String? = null
     private var desiredType: String? = null
-    private var propertyType: String? = null
     private lateinit var properties: ArrayList<Int>
+
 
     private var isReadPermissionGranted = false
     private var isWritePermissionGranted = false
@@ -137,6 +135,7 @@ class MainActivity : AppCompatActivity(){
         startActivity(intent)
 
         geonamesAccount = ManifestUtil.retrieveKey(this, "GEONAMES_ACCOUNT")
+        Log.d(TAG, "Geonames account: $geonamesAccount")
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
         startingPoint = currentLocation
@@ -157,8 +156,6 @@ class MainActivity : AppCompatActivity(){
         map.overlays.add(mItineraryMarkers)
         mViaPointInfoWindow = WaypointInfoWindow(R.layout.itinerary_bubble, map)
         updateUIWithItineraryMarkers()
-
-        poiProvider = GeoNamesPOIProvider(geonamesAccount)
 
         if (roads != null) updateUIWithRoads(roads!!)
         mPoiMarkers = RadiusMarkerClusterer(this)
@@ -259,7 +256,7 @@ class MainActivity : AppCompatActivity(){
                 val selected = item.toString()
                 if (selected.toIntOrNull() != null){
                     extraStops = parseInt(selected)
-                    Log.d(TAG, extraStops!!.toString())
+                    Log.d(TAG, extraStops.toString())
                 }
                 else if (selected != "Filter by" || selected != "Stops Desired"){
                     desiredType = selected
@@ -305,11 +302,13 @@ class MainActivity : AppCompatActivity(){
     private fun addWaypoints(extraStops: Int){
         var k = 0
         while (k<extraStops){
-            if (desiredType != null){
+            if (desiredType != "Filter By"){
+                Log.d(TAG, "Filter by called")
                 filterPropertyType(desiredType!!)
             }
             else {
-                var waypointID = rand(0, 1334)
+                Log.d(TAG, "No filter applied")
+                val waypointID = rand(0, 1334)
                 getAddressDataSnapshot(waypointID)
             }
             k++
@@ -330,7 +329,8 @@ class MainActivity : AppCompatActivity(){
                 }
                 completeAddress = "$streetAddress $cityAddress MN"
                 Log.d(TAG, completeAddress!!)
-                geocodingTask(completeAddress!!, WAYPOINT_INDEX)
+                getNameDataSnapshot(waypointID, completeAddress, WAYPOINT_INDEX)
+                //geocodingTask(completeAddress!!, WAYPOINT_INDEX)
 
             }
 
@@ -339,6 +339,26 @@ class MainActivity : AppCompatActivity(){
             }
         }
         addressRef.addListenerForSingleValueEvent(valueEventListener)
+    }
+
+    private fun getNameDataSnapshot(waypointID: Int, address: String?, waypointIndex: Int){
+        Log.d(TAG, "Name function called")
+        val rootRef = FirebaseDatabase.getInstance().reference
+        val nameRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Property Name")
+        val valueEventListener: ValueEventListener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                for (ds in dataSnapshot.children) {
+                    val propertyName = ds.getValue(String::class.java)
+                    Log.d(TAG, "Property Name: $propertyName")
+                    geocodingTask(address!!, waypointIndex, propertyName!!)
+                }
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                Log.d(TAG, databaseError.message)
+            }
+        }
+        nameRef.addListenerForSingleValueEvent(valueEventListener)
     }
     private fun filterPropertyType(desiredType: String){
         val rootRef = FirebaseDatabase.getInstance().reference
@@ -357,12 +377,12 @@ class MainActivity : AppCompatActivity(){
                         }
                     }
                     Log.d(TAG, properties.toString())
-                    var waypointID = rand(0, properties.size-1)
+                    val waypointID = rand(0, properties.size-1)
                     Log.d(TAG, properties[waypointID].toString())
                     getAddressDataSnapshot(properties[waypointID])
 
                 } else{
-                    Toast.makeText(applicationContext, "Data is not found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(applicationContext, "Filter Data is not found", Toast.LENGTH_SHORT).show()
                 }
             }
             override fun onCancelled(databaseError: DatabaseError) {
@@ -445,7 +465,7 @@ class MainActivity : AppCompatActivity(){
                             startingPoint = GeoPoint(address.latitude, address.longitude)
                             startMarker = updateItineraryMarker(
                                 startMarker, startingPoint, START_INDEX,
-                                R.string.departure, R.drawable.marker_departure, -1, addressDisplayName
+                                "Departure", R.drawable.marker_departure, -1, addressDisplayName
                             )
                             waypoints[0] = startingPoint!!
                             map.controller.setCenter(startingPoint)
@@ -454,7 +474,7 @@ class MainActivity : AppCompatActivity(){
                             destinationPoint = GeoPoint(address.latitude, address.longitude)
                             endMarker = updateItineraryMarker(
                                 endMarker, destinationPoint, DEST_INDEX,
-                                R.string.destination, R.drawable.marker_destination, -1, addressDisplayName
+                                "Destination", R.drawable.marker_destination, -1, addressDisplayName
                             )
                             addWaypoints(extraStops)
                             waypoints.add(destinationPoint!!)
@@ -464,7 +484,7 @@ class MainActivity : AppCompatActivity(){
                             currentPoint = GeoPoint(address.latitude, address.longitude)
                             currentMarker = updateItineraryMarker(
                                 null, currentPoint, index,
-                                R.string.waypoint, R.drawable.waypoint_marker, -1, addressDisplayName
+                                params[2] as String, R.drawable.waypoint_marker, -1, addressDisplayName
                             )
                             if (destinationPoint != null) waypoints.add(waypoints.size-2, currentPoint!!)
                             else waypoints.add(currentPoint!!)
@@ -490,7 +510,7 @@ class MainActivity : AppCompatActivity(){
     private val mItineraryListener: OnItineraryMarkerDragListener = OnItineraryMarkerDragListener()
     private fun updateItineraryMarker(
         inMarker: Marker?, p: GeoPoint?, index: Int,
-        titleResId: Int, markerResId: Int, imageResId: Int, address: String?): Marker {
+        title: String, markerResId: Int, imageResId: Int, address: String?): Marker {
         var marker = inMarker
         if (marker == null) {
             marker = Marker(map)
@@ -500,7 +520,7 @@ class MainActivity : AppCompatActivity(){
             marker.setOnMarkerDragListener(mItineraryListener)
             mItineraryMarkers.add(marker)
         }
-        val title = titleResId.toString()
+        val title = " "
         marker.title = title
         marker.position = p
         val icon = ContextCompat.getDrawable(this, markerResId)
@@ -561,21 +581,19 @@ class MainActivity : AppCompatActivity(){
             onPreExecute = {},
             doInBackground = {
                 val gpList = params[0]
-                Log.d(TAG, "gpList: $gpList")
                 val roadManager = OSRMRoadManager(applicationContext, "MY_USER_AGENT")
                 roadManager.getRoads(gpList)
             },
             onPostExecute = {
                 roads = it
-                Log.d(TAG, "Roads: "+ roads.toString())
                 updateUIWithRoads(roads!!)
                 poiTagText = AutoCompleteTextView(applicationContext)
-                getPOIAsync(poiTagText.text.toString())
+                //getPOIAsync(poiTagText.text.toString())
             }
         )
     }
 
-    private fun getPOIAsync(tag: String?) {
+    /*private fun getPOIAsync(tag: String?) {
         mPoiMarkers.items.clear()
         pOILoadingTask(tag)
     }
@@ -585,10 +603,66 @@ class MainActivity : AppCompatActivity(){
         )
         return map[humanReadableFeature.lowercase(Locale.getDefault())]
     }
-    private fun pOILoadingTask (vararg params: String?){
+
+    private fun pOILoadingTask(vararg params: String?) {
+        var message: String? = null
+        val mFeatureTag = params[0]
+        lifecycleScope.executeAsyncTask(
+            onPreExecute = {},
+            doInBackground = {
+                val bb: BoundingBox = map.boundingBox
+                if (desiredType != null) {
+                    Log.d(TAG, geonamesAccount)
+                    Log.d(TAG, "Attempting to call GeoNames")
+                    val poiProvider = GeoNamesPOIProvider(geonamesAccount)
+                    //Get POI inside the bounding box of the current map view:
+                    filteredPOIs = poiProvider.getPOIInside(bb, 100)
+                    Log.d(TAG, "array of pois: $filteredPOIs")
+                }
+                //this else could potentially be for the case where no filter is chosen
+                else {
+                    val overpassProvider = OverpassAPIProvider()
+                    val osmTag: String? = mFeatureTag?.let { getOSMTag(it) }
+                    if (osmTag == null) {
+                        message = "Not a not a valid feature."
+                    }
+                    val oUrl = overpassProvider.urlForPOISearch(osmTag, bb, 100, 10)
+                    overpassProvider.getPOIsFromUrl(oUrl)
+                }
+            },
+            onPostExecute = {
+                val mPOIs = filteredPOIs
+                if (mFeatureTag == null || mFeatureTag == "") {
+                    //no search, no message
+                } else if (mPOIs == null) {
+                    if (message != null) Toast.makeText(
+                        applicationContext,
+                        message,
+                        Toast.LENGTH_LONG
+                    ).show() else Toast.makeText(
+                        applicationContext,
+                        "Technical issue when getting $mFeatureTag POI.", Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        applicationContext,
+                        mFeatureTag + " found:" + mPOIs.size,
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                updateUIWithPOI(mPOIs, mFeatureTag)
+                /*if (mFeatureTag == "flickr" || mFeatureTag!!.startsWith("picasa") || mFeatureTag == "wikipedia") startAsyncThumbnailsLoading(
+                    mPOIs
+                )*/
+            }
+        )
+    }
+
+    /*private fun pOILoadingTask (vararg params: String?){
         var message: String? = null
         val mFeatureTag = params[0]
         val bb = map.boundingBox
+        poiProvider = GeoNamesPOIProvider(geonamesAccount)
         val result = when (mFeatureTag){
             null -> null
             "" -> null
@@ -625,17 +699,33 @@ class MainActivity : AppCompatActivity(){
             ).show()
         }
         updateUIWithPOI(pois, mFeatureTag)
-    }
+    }*/
+
     private fun updateUIWithPOI(pois: ArrayList<POI>?, featureTag: String?) {
+        Log.d(TAG, pois.toString())
         if (pois != null) {
             val poiInfoWindow = POIInfoWindow(map)
-            //pois = poiProvider.getPOIInside(map.boundingBox, 30)
+            //val markers = poiProvider.getPOIInside(map.boundingBox, 30)
             for (poi in pois) {
                 val poiMarker = Marker(map)
                 poiMarker.title = poi.mType
                 poiMarker.snippet = poi.mDescription
                 poiMarker.position = poi.mLocation
-                val icon = ContextCompat.getDrawable(this, R.drawable.marker_node)
+                var icon = ContextCompat.getDrawable(this, R.drawable.marker_node)
+                /*if (poi.mServiceId == POI.POI_SERVICE_GEONAMES_WIKIPEDIA) {
+                    icon = if (poi.mRank < 90)
+                        ResourcesCompat.getDrawable(
+                            resources,
+                            R.drawable.marker_poi_wikipedia_16,
+                            null
+                        );
+                    else
+                        ResourcesCompat.getDrawable(
+                            resources,
+                            R.drawable.marker_poi_wikipedia_32,
+                            null
+                        );
+                }*/
                 poiMarker.setAnchor(Marker.ANCHOR_CENTER, 1.0f)
                 poiMarker.subDescription = poi.mCategory
                 poiMarker.icon = icon
@@ -648,7 +738,8 @@ class MainActivity : AppCompatActivity(){
         mPoiMarkers.name = featureTag
         mPoiMarkers.invalidate()
 
-    }
+    }*/
+
     private fun selectRoad(roadIndex: Int) {
         putRoadNodes(roads!![roadIndex])
         //Set route info in the text view:
@@ -774,21 +865,21 @@ class MainActivity : AppCompatActivity(){
         if (startMarker != null) {
             startMarker = updateItineraryMarker(
                 null, startingPoint, START_INDEX,
-                R.string.departure, R.drawable.marker_departure, -1, null
+                "Departure", R.drawable.marker_departure, -1, null
             )
         }
         //Via-points markers if any:
         for (index in 1 until waypoints.size - 1) {
             updateItineraryMarker(
                 null, waypoints[index], index,
-                R.string.waypoint, R.drawable.waypoint_marker, -1, null
+                " ", R.drawable.waypoint_marker, -1, null
             )
         }
         //Destination marker if any:
         if (endMarker != null) {
             endMarker = updateItineraryMarker(
                 null, destinationPoint, DEST_INDEX,
-                R.string.destination, R.drawable.marker_departure, -1, null
+                "Destination", R.drawable.marker_departure, -1, null
             )
         }
     }
