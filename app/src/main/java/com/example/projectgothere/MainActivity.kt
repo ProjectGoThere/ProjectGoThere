@@ -315,7 +315,9 @@ class MainActivity : AppCompatActivity(){
     private fun addWaypoints(extraStops: Int){
         var k = 0
         while (k<extraStops){
-            if (desiredType != null){
+            Log.d(TAG, desiredType!!)
+            if (desiredType != "Filter by"){
+                Log.d(TAG, "Filter called")
                 filterPropertyType(desiredType!!)
             }
             else {
