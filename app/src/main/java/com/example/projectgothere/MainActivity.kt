@@ -302,7 +302,7 @@ class MainActivity : AppCompatActivity(){
     private fun addWaypoints(extraStops: Int){
         var k = 0
         while (k<extraStops){
-            if (desiredType != "Filter By"){
+            if (desiredType != "Filter by"){
                 Log.d(TAG, "Filter by called")
                 filterPropertyType(desiredType!!)
             }
@@ -329,6 +329,7 @@ class MainActivity : AppCompatActivity(){
                 }
                 completeAddress = "$streetAddress $cityAddress MN"
                 Log.d(TAG, completeAddress!!)
+
                 getNameDataSnapshot(waypointID, completeAddress, WAYPOINT_INDEX)
                 //geocodingTask(completeAddress!!, WAYPOINT_INDEX)
 
@@ -342,13 +343,14 @@ class MainActivity : AppCompatActivity(){
     }
 
     private fun getNameDataSnapshot(waypointID: Int, address: String?, waypointIndex: Int){
-        Log.d(TAG, "Name function called")
+        //Log.d(TAG, "Waypoint int: $waypointID, Address: $address")
         val rootRef = FirebaseDatabase.getInstance().reference
-        val nameRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Property Name")
+        val nameRef = rootRef.child("SpreadSheet").orderByChild("ID")
+        Log.d(TAG, nameRef.toString())
         val valueEventListener: ValueEventListener = object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 for (ds in dataSnapshot.children) {
-                    val propertyName = ds.getValue(String::class.java)
+                    val propertyName = ds.child("Property Name").getValue(String::class.java)
                     Log.d(TAG, "Property Name: $propertyName")
                     geocodingTask(address!!, waypointIndex, propertyName!!)
                 }
