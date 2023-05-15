@@ -419,6 +419,7 @@ class MainActivity : AppCompatActivity(){
     }
 
 
+
     private fun updateUIWithTrackingMode(locationOverlay: MyLocationNewOverlay) {
         if (trackingMode) {
             binding.trackingModeButton.setBackgroundResource(R.drawable.btn_tracking_on)
