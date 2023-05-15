@@ -209,6 +209,9 @@ class MainActivity : AppCompatActivity(){
         binding.editDestination.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
 
         binding.buttonSearchDest.setOnClickListener{
+            for (i in 1 until waypoints.size-1){
+                removePoint(i, mItineraryMarkers.items[i] as Marker)
+            }
             handleSearchButton(
                 DEST_INDEX,
                 R.id.editDestination
@@ -318,7 +321,7 @@ class MainActivity : AppCompatActivity(){
     }
     private fun addWaypoints(extraStops: Int){
         var k = 0
-        while (k<extraStops){
+        do {
             Log.d(TAG, desiredType!!)
             if (desiredType != "Filter by"){
                 Log.d(TAG, "Filter called")
@@ -329,7 +332,7 @@ class MainActivity : AppCompatActivity(){
                 getAddressDataSnapshot(waypointID)
             }
             k++
-        }
+        } while(k<extraStops)
     }
 
     private fun getAddressDataSnapshot(waypointID: Int){
@@ -452,6 +455,7 @@ class MainActivity : AppCompatActivity(){
                     }
                 } else {
                     val address: Address = it[0] //get first address
+                    Log.d(TAG, address.extras.toString())
                     val addressDisplayName: String? = address.extras.getString("display_name")
                     when (index) {
                         START_INDEX -> {
@@ -474,13 +478,22 @@ class MainActivity : AppCompatActivity(){
                             map.controller.setCenter(destinationPoint)
                         }
                         WAYPOINT_INDEX -> {
+                            val markInd:Int
                             currentPoint = GeoPoint(address.latitude, address.longitude)
+                            if (destinationPoint != null) {
+                                if (waypoints.size == 2){
+                                    waypoints.add(1, currentPoint!!)
+                                } else {
+                                    waypoints.add(waypoints.size - 2, currentPoint!!)
+                                }
+                            }
+                            else {
+                                waypoints.add(currentPoint!!)
+                            }
                             currentMarker = updateItineraryMarker(
-                                null, currentPoint, index,
+                                null, currentPoint, waypoints.indexOf(currentPoint),
                                 R.string.waypoint, R.drawable.waypoint_marker, -1, addressDisplayName
                             )
-                            if (destinationPoint != null) waypoints.add(waypoints.size-2, currentPoint!!)
-                            else waypoints.add(currentPoint!!)
                             map.controller.setCenter(currentPoint!!)
                         }
                     }
@@ -556,7 +569,7 @@ class MainActivity : AppCompatActivity(){
         imm.hideSoftInputFromWindow(locationEdit.windowToken, 0)
         val locationAddress = locationEdit.text.toString()
         if (locationAddress == "") {
-            removePoint(index)
+            //if (destinationPoint != null) removePoint(index)
             map.invalidate()
             return
         }
@@ -832,7 +845,7 @@ class MainActivity : AppCompatActivity(){
         map.overlays.add(roadNodeMarkers)
     }
 
-    fun removePoint(index: Int) {
+    fun removePoint(index: Int, marker:Marker) {
         if (index == START_INDEX) {
             if (startMarker != null) {
                 startMarker!!.closeInfoWindow()
@@ -853,55 +866,45 @@ class MainActivity : AppCompatActivity(){
                 mItineraryMarkers.remove(endMarker)
                 endMarker = null
             }
-            if (waypoints.size > 2){
-                startingPoint = waypoints[1]
-                waypoints.removeAt(0)
-            }
             else {
-                waypoints.removeAt(0)
-                startingPoint = null
+                waypoints.removeLast()
+                destinationPoint = null
             }
         } else {
-            waypoints.removeAt(index)
+            waypoints.remove(marker.position)
             updateUIWithItineraryMarkers()
         }
         getRoadAsync()
     }
 
     private fun requestPermission(){
-        lifecycleScope.executeAsyncTask(
-            onPreExecute = {},
-            doInBackground = {
-                val isReadPermission = ContextCompat.checkSelfPermission(
-                    applicationContext,
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED
+        val isReadPermission = ContextCompat.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
 
-                val isWritePermission = ContextCompat.checkSelfPermission(
-                    applicationContext,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED
+        val isWritePermission = ContextCompat.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
 
-                val isLocationPermission = ContextCompat.checkSelfPermission(
-                    applicationContext,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED
+        val isLocationPermission = ContextCompat.checkSelfPermission(
+            applicationContext,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
 
-                val minSdkLevel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        val minSdkLevel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
-                isReadPermissionGranted = isReadPermission
-                isWritePermissionGranted = isWritePermission || minSdkLevel
-                isLocationPermissionGranted = isLocationPermission
+        isReadPermissionGranted = isReadPermission
+        isWritePermissionGranted = isWritePermission || minSdkLevel
+        isLocationPermissionGranted = isLocationPermission
 
-                val permissionRequest = mutableListOf<String>()
-                if (!isWritePermissionGranted) permissionRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                if (!isReadPermissionGranted) permissionRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-                if (!isLocationPermission) permissionRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+        val permissionRequest = mutableListOf<String>()
+        if (!isWritePermissionGranted) permissionRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (!isReadPermissionGranted) permissionRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        if (!isLocationPermission) permissionRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
 
-                if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())// send data to "onPostExecute"
-            },
-            onPostExecute = {}
-        )
+        if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())// send data to "onPostExecute"
     }
     
     private fun <R> CoroutineScope.executeAsyncTask(

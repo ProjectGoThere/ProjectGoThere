@@ -17,20 +17,20 @@ import org.osmdroid.views.overlay.infowindow.MarkerInfoWindow
 class WaypointInfoWindow(layoutResId: Int, mapView: MapView?) :
     MarkerInfoWindow(layoutResId, mapView) {
     var mSelectedPoint = 0
-
+    var eItem: Marker? = null
     init {
         val btnDelete = mView.findViewById<View>(R.id.bubble_delete) as Button
         btnDelete.setOnClickListener { view -> //Call the removePoint method on MapActivity.
             //TODO: find a cleaner way to do that!
             val mapActivity: MainActivity = view.context as MainActivity
-            mapActivity.removePoint(mSelectedPoint)
+            mapActivity.removePoint(mSelectedPoint, eItem!!)
             close()
         }
     }
 
     override fun onOpen(item: Any) {
-        val eItem = item as Marker
-        mSelectedPoint = eItem.relatedObject as Int
+        eItem = item as Marker
+        mSelectedPoint = eItem!!.relatedObject as Int
         super.onOpen(item)
     }
 }
