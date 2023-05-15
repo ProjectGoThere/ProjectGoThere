@@ -12,7 +12,7 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:contentDescription="Back Button"
-        android:background="@color/green_700"
+        android:background="@drawable/roundback"
         android:src = "@drawable/back_arrow"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toStartOf="@id/tripTitle"

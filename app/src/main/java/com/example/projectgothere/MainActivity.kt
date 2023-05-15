@@ -57,6 +57,7 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.io.File
 import java.lang.Integer.parseInt
+import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.random.Random
 
@@ -74,7 +75,10 @@ private const val appDirectoryName = "ProjectGoThere"
 @Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity(){
     private lateinit var imageRoot: File
-    private var curTripName = "MyTrips"
+    private val date = Calendar.getInstance().time
+    private val sdf = SimpleDateFormat("MM-dd-yyyy",Locale.US)
+    private val fdate = sdf.format(date)
+    private var curTripName = "My Trip $fdate"
     private lateinit var curTripDir: File
     private var currentPoint: GeoPoint? = null
     private var startMarker : Marker? = null
