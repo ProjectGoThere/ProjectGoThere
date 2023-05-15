@@ -380,7 +380,7 @@ class MainActivity : AppCompatActivity(){
                         }
                     }
                     Log.d(TAG, properties.toString())
-                    val waypointID = rand(0, properties.size)
+                    val waypointID = rand(0, properties.size-1)
                     getAddressDataSnapshot(properties[waypointID])
 
                 } else{
