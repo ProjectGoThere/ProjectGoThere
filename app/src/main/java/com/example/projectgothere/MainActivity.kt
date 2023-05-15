@@ -102,7 +102,6 @@ class MainActivity : AppCompatActivity(){
     private var streetAddress: String? = null
     private var completeAddress: String? = null
     private var desiredType: String? = null
-    private var propertyType: String? = null
     private lateinit var properties: ArrayList<Int>
 
     private var isReadPermissionGranted = false
@@ -212,8 +211,8 @@ class MainActivity : AppCompatActivity(){
         } //end
 
         binding.trackingModeButton.setOnClickListener{
-                trackingMode = !trackingMode
-                updateUIWithTrackingMode()
+                trackingMode = (!trackingMode)
+                updateUIWithTrackingMode(locationOverlay)
         }
 
         map.invalidate()
@@ -409,19 +408,20 @@ class MainActivity : AppCompatActivity(){
         }
         return theAddress ?: ""
     }
+    
 
-    private fun updateUIWithTrackingMode() {
+    private fun updateUIWithTrackingMode(locationOverlay: MyLocationNewOverlay) {
         if (trackingMode) {
             binding.trackingModeButton.setBackgroundResource(R.drawable.btn_tracking_on)
             if (locationOverlay.isEnabled && locationOverlay.myLocation != null) {
                 map.controller.animateTo(locationOverlay.myLocation)
             }
             map.mapOrientation = -mAzimuthAngleSpeed
-            binding.trackingModeButton.setKeepScreenOn(true)
+            binding.trackingModeButton.keepScreenOn = true
         } else {
             binding.trackingModeButton.setBackgroundResource(R.drawable.btn_tracking_off)
             map.mapOrientation = 0.0f
-            binding.trackingModeButton.setKeepScreenOn(false)
+            binding.trackingModeButton.keepScreenOn = false
         }
     }
 
