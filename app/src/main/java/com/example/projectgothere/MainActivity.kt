@@ -417,6 +417,22 @@ class MainActivity : AppCompatActivity(){
         }
         return theAddress ?: ""
     }
+    
+
+    private fun updateUIWithTrackingMode(locationOverlay: MyLocationNewOverlay) {
+        if (trackingMode) {
+            binding.trackingModeButton.setBackgroundResource(R.drawable.btn_tracking_on)
+            if (locationOverlay.isEnabled && locationOverlay.myLocation != null) {
+                map.controller.animateTo(locationOverlay.myLocation)
+            }
+            map.mapOrientation = -mAzimuthAngleSpeed
+            binding.trackingModeButton.keepScreenOn = true
+        } else {
+            binding.trackingModeButton.setBackgroundResource(R.drawable.btn_tracking_off)
+            map.mapOrientation = 0.0f
+            binding.trackingModeButton.keepScreenOn = false
+        }
+    }
 
 
 
