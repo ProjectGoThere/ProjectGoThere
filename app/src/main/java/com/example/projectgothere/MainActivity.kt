@@ -832,7 +832,7 @@ class MainActivity : AppCompatActivity(){
         if (endMarker != null) {
             endMarker = updateItineraryMarker(
                 null, destinationPoint, DEST_INDEX,
-                R.string.destination, R.drawable.marker_departure, -1, null
+                R.string.destination, R.drawable.marker_destination, -1, null
             )
         }
     }
