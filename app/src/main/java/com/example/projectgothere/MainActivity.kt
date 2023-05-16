@@ -88,14 +88,11 @@ class MainActivity : AppCompatActivity(){
 
     private var mItineraryMarkers = FolderOverlay()
     private var roadNodeMarkers = FolderOverlay()
-    //private var mPOIs: ArrayList<POI>? = null
 
     private lateinit var roadManager: RoadManager
     private var roadOverlay: ArrayList<Polyline>? = null
     private lateinit var geonamesAccount: String
     private lateinit var mViaPointInfoWindow: WaypointInfoWindow
-    //private lateinit var poiTagText : AutoCompleteTextView
-    //private lateinit var mPoiMarkers:RadiusMarkerClusterer
     private lateinit var locationOverlay:MyLocationNewOverlay
 
     private var currentLocation: GeoPoint = GeoPoint(44.3242, -93.9760)
@@ -147,7 +144,6 @@ class MainActivity : AppCompatActivity(){
         roadManager = OSRMRoadManager(this, "MY_USER_AGENT")
 
         startingPoint = currentLocation
-        //GeoPoint(46.7867, -92.1005)
 
         waypoints = ArrayList()
         waypoints.add(startingPoint!!)
@@ -191,11 +187,10 @@ class MainActivity : AppCompatActivity(){
         spinStopsDes.adapter = stopsAdapter
         getSpinnerVal(spinStopsDes)
 
-
         binding.cameraButton.setOnClickListener{
             showDialog()
         }
-        //start
+
         binding.editDeparture.setPrefKeys(SHARED_PREFS_APPKEY, PREF_LOCATIONS_KEY)
 
         binding.buttonSearchDep.setOnClickListener{
@@ -215,7 +210,7 @@ class MainActivity : AppCompatActivity(){
                 DEST_INDEX,
                 R.id.editDestination
             )
-        } //end
+        }
 
         binding.trackingModeButton.setOnClickListener{
                 trackingMode = (!trackingMode)
@@ -276,15 +271,12 @@ class MainActivity : AppCompatActivity(){
                 id: Long
             ) {
                 val item = parent.getItemAtPosition(pos)
-                //Log.d(TAG, item.toString()) //prints the text in spinner item.
                 val selected = item.toString()
                 if (selected.toIntOrNull() != null){
                     extraStops = parseInt(selected)
-                    Log.d(TAG, extraStops!!.toString())
                 }
                 else if (selected != "Filter by" || selected != "Stops Desired"){
                     desiredType = selected
-                    Log.d(TAG, desiredType!!)
                 }
             }
 
@@ -310,7 +302,7 @@ class MainActivity : AppCompatActivity(){
                         Toast.makeText(applicationContext, "Permission Required", Toast.LENGTH_SHORT)
                             .show()
                     }
-                } // send data to "onPostExecute"
+                }
             },
             onPostExecute = {
                 if (location != null) {
@@ -326,9 +318,7 @@ class MainActivity : AppCompatActivity(){
     private fun addWaypoints(extraStops: Int){
         var k = 0
         do {
-            Log.d(TAG, desiredType!!)
             if (desiredType != "Filter by"){
-                Log.d(TAG, "Filter called")
                 filterPropertyType(desiredType!!)
             }
             else {
@@ -352,7 +342,6 @@ class MainActivity : AppCompatActivity(){
                     }
                 }
                 completeAddress = "$streetAddress $cityAddress MN"
-                Log.d(TAG, completeAddress!!)
                 geocodingTask(completeAddress!!, WAYPOINT_INDEX)
 
             }
@@ -379,10 +368,8 @@ class MainActivity : AppCompatActivity(){
                             properties.add(currentWaypointID)
                         }
                     }
-                    Log.d(TAG, properties.toString())
                     val waypointID = rand(0, properties.size-1)
                     getAddressDataSnapshot(properties[waypointID])
-
                 } else{
                     Toast.makeText(applicationContext, "Data is not found", Toast.LENGTH_SHORT).show()
                 }
@@ -451,10 +438,9 @@ class MainActivity : AppCompatActivity(){
                     )
                 } catch (e: Exception){
                     null
-                } // send data to "onPostExecute"
+                }
             },
             onPostExecute = {
-                // ... here "it" is a data returned from "doInBackground"
                 if (it == null){
                     Handler(Looper.getMainLooper()).post {
                         Toast.makeText(applicationContext, "Geocoding error", Toast.LENGTH_SHORT)
@@ -474,7 +460,6 @@ class MainActivity : AppCompatActivity(){
                     }
                 } else {
                     val address: Address = it[0] //get first address
-                    Log.d(TAG, address.extras.toString())
                     val addressDisplayName: String? = address.extras.getString("display_name")
                     when (index) {
                         START_INDEX -> {
@@ -497,7 +482,6 @@ class MainActivity : AppCompatActivity(){
                             map.controller.setCenter(destinationPoint)
                         }
                         WAYPOINT_INDEX -> {
-                            val markInd:Int
                             currentPoint = GeoPoint(address.latitude, address.longitude)
                             if (destinationPoint != null) {
                                 if (waypoints.size == 2){
@@ -516,13 +500,11 @@ class MainActivity : AppCompatActivity(){
                             map.controller.setCenter(currentPoint!!)
                         }
                     }
-                    Log.d(TAG,"Waypoints: $waypoints")
                     getRoadAsync()
                     //get and display enclosing polygon:
                     if (address.extras.containsKey("polygonpoints")) {
                         val polygon: ArrayList<GeoPoint?>? =
                             address.extras.getParcelableArrayList("polygonpoints")
-                        //Log.d("DEBUG", "polygon:"+polygon.size());
                         updateUIWithPolygon(polygon, addressDisplayName)
                     } else {
                         updateUIWithPolygon(null, "")
@@ -588,7 +570,6 @@ class MainActivity : AppCompatActivity(){
         imm.hideSoftInputFromWindow(locationEdit.windowToken, 0)
         val locationAddress = locationEdit.text.toString()
         if (locationAddress == "") {
-            //if (destinationPoint != null) removePoint(index)
             map.invalidate()
             return
         }
@@ -600,107 +581,28 @@ class MainActivity : AppCompatActivity(){
             PREF_LOCATIONS_KEY
         )
         geocodingTask(locationAddress, index)
-    }//endHandleSearchButton
+    }
     private fun updateRoadTask(vararg params: ArrayList<GeoPoint>){
         lifecycleScope.executeAsyncTask(
             onPreExecute = {},
             doInBackground = {
                 val gpList = params[0]
-                Log.d(TAG, "gpList: $gpList")
                 val roadManager = OSRMRoadManager(applicationContext, "MY_USER_AGENT")
                 roadManager.getRoads(gpList)
             },
             onPostExecute = {
                 roads = it
-                Log.d(TAG, "Roads: "+ roads.toString())
                 updateUIWithRoads(roads!!)
-                //getPOIAsync(poiTagText.text.toString())
             }
         )
     }
 
-    /*private fun getPOIAsync(tag: String?) {
-        mPoiMarkers.items.clear()
-        pOILoadingTask(tag)
-    }*/
-    /*private fun getOSMTag(humanReadableFeature: String): String? {
-        val map = BonusPackHelper.parseStringMapResource(
-            applicationContext, R.array.osm_poi_tags
-        )
-        return map[humanReadableFeature.lowercase(Locale.getDefault())]
-    }*/
-    /*private fun pOILoadingTask (vararg params: String?){
-        var message: String? = null
-        val mFeatureTag = params[0]
-        val bb = map.boundingBox
-        val result = when (mFeatureTag){
-            null -> null
-            "" -> null
-            else -> {
-                val overpassProvider = OverpassAPIProvider()
-                val osmTag: String? = getOSMTag(mFeatureTag)
-                if (osmTag == null) {
-                    message = "$mFeatureTag is not a valid feature."
-                    null
-                }
-                val oUrl = overpassProvider.urlForPOISearch(osmTag, bb, 100, 10)
-                overpassProvider.getPOIsFromUrl(oUrl)
-            }
-        }
-        if (result != null) {
-            mPOIs = result
-        }
-        if (mFeatureTag == "") {
-            //no search, no message
-        } else if (mPOIs == null) {
-            if (message != null) Toast.makeText(
-                applicationContext,
-                message,
-                Toast.LENGTH_LONG
-            ).show() else Toast.makeText(
-                applicationContext,
-                "Technical issue when getting $mFeatureTag POI.", Toast.LENGTH_LONG
-            ).show()
-        } else {
-            Toast.makeText(
-                applicationContext,
-                mFeatureTag + " found:" + mPOIs!!.size,
-                Toast.LENGTH_LONG
-            ).show()
-        }
-        updateUIWithPOI(mPOIs, mFeatureTag)
-    }*/
-    /*private fun updateUIWithPOI(pois: ArrayList<POI>?, featureTag: String?) {
-        if (pois != null) {
-            val poiInfoWindow = POIInfoWindow(map)
-            for (poi in pois) {
-                val poiMarker = Marker(map)
-                poiMarker.title = poi.mType
-                poiMarker.snippet = poi.mDescription
-                poiMarker.position = poi.mLocation
-                val icon = ContextCompat.getDrawable(this, R.drawable.marker_node)
-                poiMarker.setAnchor(Marker.ANCHOR_CENTER, 1.0f)
-                poiMarker.subDescription = poi.mCategory
-                poiMarker.icon = icon
-                poiMarker.relatedObject = poi
-                poiMarker.setInfoWindow(poiInfoWindow)
-                //thumbnail loading moved in async task for better performances.
-                mPoiMarkers.add(poiMarker)
-            }
-        }
-        mPoiMarkers.name = featureTag
-        mPoiMarkers.invalidate()
-
-    }*/
     private fun selectRoad(roadIndex: Int) {
         putRoadNodes(roads!![roadIndex])
-        //Set route info in the text view:
-        //val textView = findViewById<View>(R.id.routeInfo) as TextView
-        //textView.text = roads[roadIndex].getLengthDurationText(this, -1)
         for (i in 0 until roadOverlay!!.size) {
             val p: Paint = roadOverlay!![i].paint
-            if (i == roadIndex) p.color = -0x7fffff01 //blue
-            else p.color = -0x6f99999a //grey
+            if (i == roadIndex) p.color = -0x7fffff01
+            else p.color = -0x6f99999a
         }
         map.invalidate()
     }
@@ -717,8 +619,6 @@ class MainActivity : AppCompatActivity(){
 
     private fun updateUIWithRoads(roads: Array<Road>) {
         roadNodeMarkers.items.clear()
-        //val textView = findViewById<View>(R.id.routeInfo) as TextView
-        //textView.text = ""
         val mapOverlays = map.overlays
         if (roadOverlay != null) {
             for (i in 0 until roadOverlay!!.size) mapOverlays.remove(roadOverlay!![i])
@@ -742,8 +642,6 @@ class MainActivity : AppCompatActivity(){
             roadPolyline.relatedObject = i
             roadPolyline.setOnClickListener(RoadOnClickListener())
             mapOverlays.add(1, roadPolyline)
-            //we insert the road overlays at the "bottom", just above the MapEventsOverlay,
-            //to avoid covering the other overlays.
         }
         selectRoad(0)
     }
@@ -769,12 +667,11 @@ class MainActivity : AppCompatActivity(){
         if (location != -1) mapOverlays[location] = destinationPolygon else mapOverlays.add(
             1,
             destinationPolygon
-        ) //insert just above the MapEventsOverlay.
+        )
         setViewOn(bb)
         map.invalidate()
     }
 
-    //Async task to reverse-geocode the marker position in a separate thread:
     private fun reverseGeocodingTask(vararg params: Marker?) {
         var marker:Marker? = null
         lifecycleScope.executeAsyncTask(
@@ -784,7 +681,6 @@ class MainActivity : AppCompatActivity(){
                 getAddress(marker!!.position)
             },
             onPostExecute = {
-                //...here "it" is a data returned from "doInBackground"
                 if (marker != null){
                     marker!!.snippet = it
                     marker!!.showInfoWindow()
@@ -851,7 +747,7 @@ class MainActivity : AppCompatActivity(){
                 Road.getLengthDurationText(this, node.mLength, node.mDuration)
             nodeMarker.position = node.mLocation
             nodeMarker.icon = icon
-            nodeMarker.setInfoWindow(infoWindow) //use a shared infowindow.
+            nodeMarker.setInfoWindow(infoWindow)
             val iconId = iconIds.getResourceId(node.mManeuverType, R.drawable.ic_empty)
             if (iconId != R.drawable.ic_empty) {
                 val image = ResourcesCompat.getDrawable(resources, iconId, null)

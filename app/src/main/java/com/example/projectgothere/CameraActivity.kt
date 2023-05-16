@@ -1,17 +1,12 @@
 package com.example.projectgothere
 
 import android.Manifest
-import android.content.ContentValues
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
-import android.icu.text.DateFormat.getDateTimeInstance
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -19,14 +14,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.core.view.drawToBitmap
 import androidx.lifecycle.lifecycleScope
 import com.example.projectgothere.databinding.ActivityCameraBinding
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
-import java.io.OutputStream
-import java.text.DateFormat.getDateTimeInstance
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -136,7 +128,7 @@ class CameraActivity : AppCompatActivity() {
         val bitmap = bitmapDrawable.bitmap
         var outputStream: FileOutputStream? = null
         val curDir = intent.getStringExtra("currentDir")
-        val dir = File(curDir)
+        val dir = File(curDir!!)
         val date = Calendar.getInstance().time
         val sdf = SimpleDateFormat(FILENAME_FORMAT,Locale.US)
         val fdate = sdf.format(date)
