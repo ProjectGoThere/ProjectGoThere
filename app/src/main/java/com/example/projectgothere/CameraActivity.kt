@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class CameraActivity : AppCompatActivity() {
+    //activity launcher for taking a picture
     private val takeImageResult = registerForActivityResult(ActivityResultContracts.TakePicture()) { isSuccess ->
         if (isSuccess) {
             latestTmpUri?.let { uri ->
@@ -31,6 +32,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    //activity launcher for choosing a picture from the gallery
     private val selectImageFromGalleryResult = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             previewImage.setImageURI(uri)
@@ -73,6 +75,8 @@ class CameraActivity : AppCompatActivity() {
         }
 
     }
+
+    //asynchronously launch camera to take picture
     private fun takeImage() {
         lifecycleScope.launch {
             getTmpFileUri().let { uri ->
@@ -82,8 +86,11 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    //asynchronously launch select image
     private fun selectImageFromGallery() = selectImageFromGalleryResult.launch("image/*")
 
+    //make and get the uri of a temporary file to be filled with picture and moved to current
+    //folder
     private fun getTmpFileUri(): Uri {
         val tmpFile = File.createTempFile("tmp_image_file", ".jpeg", cacheDir).apply {
             createNewFile()
@@ -93,6 +100,7 @@ class CameraActivity : AppCompatActivity() {
         return FileProvider.getUriForFile(applicationContext, "${BuildConfig.APPLICATION_ID}.provider", tmpFile)
     }
 
+    //request necessary permissions for camera functionality
     private fun requestPermission(){
         val isCameraPermission = ContextCompat.checkSelfPermission(
             this,
@@ -123,6 +131,7 @@ class CameraActivity : AppCompatActivity() {
         if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())
     }
 
+    //takes the image previewed in the imageview to the current folder
     private fun saveToGallery() {
         val bitmapDrawable = viewBinding.imageView.drawable as BitmapDrawable
         val bitmap = bitmapDrawable.bitmap
@@ -157,11 +166,13 @@ class CameraActivity : AppCompatActivity() {
         Toast.makeText(this,"Image saved",Toast.LENGTH_SHORT).show()
     }
 
+    //checks if all permissions are granted for camera activity
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
             baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
+    //handles when some or all permissions are denied
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<String>, grantResults:
         IntArray) {

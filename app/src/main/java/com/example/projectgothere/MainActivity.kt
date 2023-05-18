@@ -127,6 +127,7 @@ class MainActivity : AppCompatActivity(){
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        //activity launcher for permissions
         permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){ permissions ->
             isReadPermissionGranted = permissions[Manifest.permission.READ_EXTERNAL_STORAGE] ?: isReadPermissionGranted
             isWritePermissionGranted = permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE] ?: isWritePermissionGranted
@@ -223,6 +224,7 @@ class MainActivity : AppCompatActivity(){
         map.invalidate()
     }
 
+    //creates bottom of screen dialog for camera funcitons
     private fun showDialog() {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -398,6 +400,8 @@ class MainActivity : AppCompatActivity(){
         propertyRef.addValueEventListener(valueEventListener)
     }
 
+    //takes in a GeoPoint and returns the string value of the address associated with
+    //that position
     private fun getAddress(p: GeoPoint): String {
         val geocoder = GeocoderNominatim(userAgent)
         val theAddress: String? = try {
@@ -422,6 +426,7 @@ class MainActivity : AppCompatActivity(){
         return theAddress ?: ""
     }
 
+    //takes in the current location and focuses map on that location if button is enabled
     private fun updateUIWithTrackingMode(locationOverlay: MyLocationNewOverlay) {
         if (trackingMode) {
             binding.trackingModeButton.setBackgroundResource(R.drawable.btn_tracking_on)
@@ -437,6 +442,8 @@ class MainActivity : AppCompatActivity(){
         }
     }
 
+    //takes in string address and index identifying location along route; asynchronously
+    //updates that position on the route
     private fun geocodingTask(vararg params: Any){
         var index = 0
         lifecycleScope.executeAsyncTask(
@@ -532,6 +539,10 @@ class MainActivity : AppCompatActivity(){
     }
 
     private val mItineraryListener: OnItineraryMarkerDragListener = OnItineraryMarkerDragListener()
+
+    //takes in a marker, GeoPoint, index, title, marker type, image type, and string address and
+    //returns a marker at the identified position and index with the title and address in the
+    //bubble that pops up on click
     private fun updateItineraryMarker(
         inMarker: Marker?, p: GeoPoint?, index: Int,
         titleResId: Int, markerResId: Int, imageResId: Int, address: String?): Marker {
@@ -559,6 +570,8 @@ class MainActivity : AppCompatActivity(){
             reverseGeocodingTask(marker)
         return marker
     }
+
+    //update road overlay to represent current waypoint list
     private fun getRoadAsync() {
         roads = arrayOf()
         var roadStartPoint: GeoPoint?= null
@@ -579,6 +592,8 @@ class MainActivity : AppCompatActivity(){
         waypoints = newWayPoints
         updateRoadTask(waypoints)
     }
+
+    //takes in an index and the type of search button and handles the search button functionality
     private fun handleSearchButton(index: Int, editResId: Int) {
         val locationEdit = findViewById<View>(editResId) as EditText
         //Hide the soft keyboard:
@@ -599,6 +614,8 @@ class MainActivity : AppCompatActivity(){
         )
         geocodingTask(locationAddress, index)
     }
+
+    //takes in an ArrayList of GeoPoints and finds the roads between the points
     private fun updateRoadTask(vararg params: ArrayList<GeoPoint>){
         lifecycleScope.executeAsyncTask(
             onPreExecute = {},
@@ -614,6 +631,7 @@ class MainActivity : AppCompatActivity(){
         )
     }
 
+    //shows all roads between waypoints and highlights the most efficent route in blue
     private fun selectRoad(roadIndex: Int) {
         putRoadNodes(roads!![roadIndex])
         for (i in 0 until roadOverlay!!.size) {
@@ -624,6 +642,7 @@ class MainActivity : AppCompatActivity(){
         map.invalidate()
     }
 
+    //class to handle clicking another road
     internal class RoadOnClickListener : Polyline.OnClickListener {
         override fun onClick(polyline: Polyline, mapView: MapView, eventPos: GeoPoint): Boolean {
             val selectedRoad = polyline.relatedObject as Int
@@ -634,6 +653,7 @@ class MainActivity : AppCompatActivity(){
         }
     }
 
+    //takes in an Array of Roads and updates the overlay to show the roads
     private fun updateUIWithRoads(roads: Array<Road>) {
         roadNodeMarkers.items.clear()
         val mapOverlays = map.overlays
@@ -663,11 +683,15 @@ class MainActivity : AppCompatActivity(){
         selectRoad(0)
     }
 
+    //takes in a BoundingBox and focuses the map on that area
     private fun setViewOn(bb: BoundingBox?) {
         if (bb != null) {
             map.zoomToBoundingBox(bb, true)
         }
     }
+
+    //takes in an ArrayList of GeoPoints and a string name and updates the overlay to include that
+    //identified area on the map
     private fun updateUIWithPolygon(polygon: ArrayList<GeoPoint?>?, name: String?) {
         val mapOverlays = map.overlays
         val location = if (destinationPolygon != null) mapOverlays.indexOf(destinationPolygon) else -1
@@ -689,6 +713,7 @@ class MainActivity : AppCompatActivity(){
         map.invalidate()
     }
 
+    //takes in a marker and asynchronously finds the address related to that marker
     private fun reverseGeocodingTask(vararg params: Marker?) {
         var marker:Marker? = null
         lifecycleScope.executeAsyncTask(
@@ -706,6 +731,7 @@ class MainActivity : AppCompatActivity(){
         )
     }
 
+    //class to handle dragging itinerary markers
     internal class OnItineraryMarkerDragListener : OnMarkerDragListener {
         override fun onMarkerDrag(marker: Marker) {}
         override fun onMarkerDragEnd(marker: Marker) {
@@ -723,6 +749,7 @@ class MainActivity : AppCompatActivity(){
         override fun onMarkerDragStart(marker: Marker) {}
     }
 
+    //updates overlay to show all current markers based on the ArrayList of markers
     private fun updateUIWithItineraryMarkers() {
         mItineraryMarkers.closeAllInfoWindows()
         mItineraryMarkers.items.clear()
@@ -748,6 +775,8 @@ class MainActivity : AppCompatActivity(){
             )
         }
     }
+
+    //takes in a Road and provides navigation along that route
     private fun putRoadNodes(road: Road) {
         roadNodeMarkers.items.clear()
         val icon = ResourcesCompat.getDrawable(resources, R.drawable.marker_node, null)
@@ -777,6 +806,8 @@ class MainActivity : AppCompatActivity(){
         map.overlays.add(roadNodeMarkers)
     }
 
+    //takes in an index and a marker and removes the point associated with the index and location
+    //of the marker
     fun removePoint(index: Int, marker:Marker) {
         if (index == START_INDEX) {
             if (startMarker != null) {
@@ -809,6 +840,7 @@ class MainActivity : AppCompatActivity(){
         getRoadAsync()
     }
 
+    //request necessary permissions for app functionality
     private fun requestPermission(){
         val isReadPermission = ContextCompat.checkSelfPermission(
             applicationContext,
@@ -838,7 +870,8 @@ class MainActivity : AppCompatActivity(){
 
         if (permissionRequest.isNotEmpty()) permissionLauncher.launch(permissionRequest.toTypedArray())// send data to "onPostExecute"
     }
-    
+
+    //creates an asynchronous task
     private fun <R> CoroutineScope.executeAsyncTask(
         onPreExecute: () -> Unit,
         doInBackground: () -> R,
