@@ -145,6 +145,7 @@ class MainActivity : AppCompatActivity(){
 
         startingPoint = currentLocation
 
+        //create an array to hold the start point, end point, and randomly chosen historical locations
         waypoints = ArrayList()
         waypoints.add(startingPoint!!)
 
@@ -172,6 +173,7 @@ class MainActivity : AppCompatActivity(){
         mPoiMarkers.textPaint.textSize = 12 * resources.displayMetrics.density
         map.overlays.add(mPoiMarkers)
 
+        //spinner for specifying propety type in the filter function
         val spinPropType : Spinner = binding.propTypeDd
         val propAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
             R.array.propTypes, android.R.layout.simple_spinner_item)
@@ -180,6 +182,7 @@ class MainActivity : AppCompatActivity(){
         getSpinnerVal(spinPropType)
         properties = ArrayList()
 
+        //spinner for specifying how many stops are requested
         val spinStopsDes : Spinner = binding.stopsDesiredDd
         val stopsAdapter : ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this,
             R.array.amtStopsDesired, android.R.layout.simple_spinner_item)
@@ -261,7 +264,7 @@ class MainActivity : AppCompatActivity(){
 
     }
 
-
+    //getSpinnerVal returns the value chosen in whatever spinner is input
     private fun getSpinnerVal(spinner: Spinner){
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
@@ -272,7 +275,7 @@ class MainActivity : AppCompatActivity(){
             ) {
                 val item = parent.getItemAtPosition(pos)
                 val selected = item.toString()
-                if (selected.toIntOrNull() != null){
+                if (selected.toIntOrNull() != null){ //if value chosen is a number
                     extraStops = parseInt(selected)
                 }
                 else if (selected != "Filter by" || selected != "Stops Desired"){
@@ -284,11 +287,13 @@ class MainActivity : AppCompatActivity(){
         }
     }
 
+    //rand generates a random number between two specified values
     private fun rand(start: Int, end: Int): Int {
         require(!(start > end || end - start + 1 > Int.MAX_VALUE)) { "Illegal Argument" }
         return Random(System.nanoTime()).nextInt(end - start + 1) + start
     }
 
+    //returns the current location of the user in lat and long
     private fun getLocation() {
         var location: Location? = null
         lifecycleScope.executeAsyncTask(
@@ -315,13 +320,18 @@ class MainActivity : AppCompatActivity(){
             }
         )
     }
+
+    //addWaypoints takes in how many historical locations are desired and adds them
+    //to the waypoint array
     private fun addWaypoints(extraStops: Int){
         var k = 0
         do {
             if (desiredType != "Filter by"){
+                //if a filter has been selected, only specific IDs of historic locations
+                //can be selected
                 filterPropertyType(desiredType!!)
             }
-            else {
+            else { //choose any waypoint from the entire database
                 val waypointID = rand(0, 1334)
                 getAddressDataSnapshot(waypointID)
             }
@@ -329,6 +339,8 @@ class MainActivity : AppCompatActivity(){
         } while(k<extraStops)
     }
 
+    //getAddressDataSnapshot returns the address information for a specific location ID
+    //in the database
     private fun getAddressDataSnapshot(waypointID: Int){
         val rootRef = FirebaseDatabase.getInstance().reference
         val addressRef = rootRef.child("SpreadSheet").child(waypointID.toString()).child("Address")
@@ -341,6 +353,7 @@ class MainActivity : AppCompatActivity(){
                         2 -> streetAddress = ds.getValue(String::class.java)
                     }
                 }
+                //compile address information into a readable address
                 completeAddress = "$streetAddress $cityAddress MN"
                 geocodingTask(completeAddress!!, WAYPOINT_INDEX)
 
@@ -352,6 +365,10 @@ class MainActivity : AppCompatActivity(){
         }
         addressRef.addListenerForSingleValueEvent(valueEventListener)
     }
+
+    //filterPropertyType takes in the value returned from the property type spinner if one
+    //is chosen, creates an array of values in the database that have that type, and chooses
+    //a random ID number from the ones in the array to be added to the waypoints array
     private fun filterPropertyType(desiredType: String){
         val rootRef = FirebaseDatabase.getInstance().reference
         val propertyRef = rootRef.child("SpreadSheet").orderByChild("Property Type").equalTo(desiredType)
